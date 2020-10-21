@@ -28,6 +28,39 @@
   color: #61dafb;
 }
 
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 180px;
+}
+
+.alive {
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.cell {
+  width: 10px;
+  height: 10px;
+  background-color: aqua;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.step {
+  position: fixed;
+}
+
+.view {
+  display: flex;
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
