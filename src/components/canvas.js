@@ -1,17 +1,17 @@
 import React, { useRef, useEffect } from 'react'
 
-const Canvas = props => {
+const Canvas = (props) => {
   const canvasRef = useRef(null)
 
   const draw = (ctx) => {
-    props.alive.forEach(element => {
-      const x = element.coord.x*props.size;
-      const y = element.coord.y*props.size;
+    for (let [key, value] of props.alive) {
+      const x = value.coord.x*props.size;
+      const y = value.coord.y*props.size;
 
       ctx.beginPath();
       ctx.rect(x, y, props.size, props.size);
       ctx.fill();
-    })
+    }
   }
   
   useEffect(() => {
