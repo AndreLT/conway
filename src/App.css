@@ -47,6 +47,7 @@
 .button-group {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -56,7 +57,7 @@
 
 .main {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100vh;
   width: 100vw;
   justify-items: center;
@@ -64,11 +65,21 @@
   background-color: rosybrown;
 }
 
+.side-menu {
+  display: flex;
+  flex-direction: column;
+  height: 50vh;
+  width: 20vw;
+  justify-content: space-evenly;
+}
+
 .view {
   background-color: white;
   border-style: solid;
   border-width: 1px;
   resize: both;
+  height: 95vh;
+  width: 70vw;
 }
 
 

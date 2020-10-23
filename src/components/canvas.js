@@ -1,12 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react'
 
 const Canvas = props => {
-  const canvasRef = useRef(null)
-  const cellSelected = {x:0, y:0};
-  const [ctx, setCtx] = useState(null);
-  let relativeLocation = null;
+  const canvasRef = useRef(null);
 
-  const draw = () => {
+  const draw = (ctx) => {
     
     for (let [key, value] of props.alive) {
       const x = value.coord.x*props.size;
@@ -18,26 +15,33 @@ const Canvas = props => {
     }
   }
 
+  const drawCursor = (ctx) => {
+    ctx.beginPath();
+    ctx.rect(props.cursor.x*props.size, props.cursor.y*props.size, props.size, props.size);
+    ctx.strokeStyle = "red";
+    ctx.stroke();
+  }
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d')
-    setCtx(context);
+    const context = canvas.getContext('2d');
 
     //getting canvas width
-    let width=Math.floor(window.innerWidth*0.7)
-    let height=Math.floor(window.innerHeight*0.9)
+    /*let width=window.innerWidth*0.7
+    let height=window.innerHeight-20
 
     context.canvas.width=width
-    context.canvas.height=height
-    console.log(width, height)
+    context.canvas.height=height*/
 
-    relativeLocation=({x:context.canvas.offsetLeft, y:context.canvas.offsetTop})
+    if(props.cursor){
+      drawCursor(context);
+    }
 
-    draw()
+    draw(context);
   })
 
   
-  return <canvas class="view" ref={canvasRef} {...props}/>
+  return <canvas id="board" class="view" ref={canvasRef} {...props}/>
 }
 
 export default Canvas

@@ -14,8 +14,18 @@ const Board = () => {
     const [generation, setGeneration] = useState(0);
     const [intervalId, setIntervalId] = useState(false);
     const [size, setSize] = useState(10);
-    const [canvas, setCanvas] = useState(<Canvas onClick={e => addManually(e)} generation={generation} alive={alive} size={size}/>);
+    const [cursorCoord, setCursorCoord] = useState({x:0,y:0});
+    const [canvas, setCanvas] = useState(<Canvas cursor={cursorCoord} generation={generation} alive={alive} size={size}/>);
     const [fps, setFps] = useState(300);
+
+    const canvasProps = () => {
+        return {
+            cursor: cursorCoord,
+            generation: generation,
+            alive: alive,
+            size: size
+        }
+    }
 
 
     const rNeighbours = (element, testdead) => {
@@ -38,21 +48,30 @@ const Board = () => {
         console.log("drew board");
     }
 
-    const addManually = (e) => {
-
-        let relativeW = e.target.offsetLeft;
-        let relativeH = e.target.offsetTop;
-
-        let x = Math.floor((e.clientX - relativeW)/size)
-        let y = Math.floor((e.clientY - relativeH)/size)
-
-        
-        
-        if(intervalId)
-            toLive.set(x + '-' + y,{x: x, y: y})
-        else{
-            alive.set(x + '-' + y, {coord:{x:x, y:y}})
-            updateCanvas();
+    const handleKeyPress = (key) => {
+        let newCursor = null;
+        switch(key){
+            case 'ArrowUp':
+                newCursor = {x:cursorCoord.x ,y:cursorCoord.y - 1}
+                break;
+            case 'ArrowDown':
+                newCursor = {x:cursorCoord.x ,y:cursorCoord.y + 1}
+                break;
+            case 'ArrowRight':
+                newCursor = {x:cursorCoord.x + 1 ,y:cursorCoord.y}
+                break;
+            case 'ArrowLeft':
+                newCursor = {x:cursorCoord.x - 1 ,y:cursorCoord.y}
+                break;
+            case ' ':
+                console.log(`supposed to add cell on coordinates ${cursorCoord.x} x ${cursorCoord.y}`)
+            default:
+                console.log('key not implemented')
+        }
+        if(newCursor){
+            let {cursor, ...newProps} = canvasProps();
+            updateCanvas({cursor: newCursor, ...newProps});
+            setCursorCoord(newCursor)
         }
     }
 
@@ -78,7 +97,7 @@ const Board = () => {
             toLive.set(model[i].x + '-' + model[i].y,model[i])
         }
         eConceive();
-        updateCanvas();
+        updateCanvas(canvasProps());
     } 
 
     const eConceive = () => {
@@ -106,35 +125,37 @@ const Board = () => {
         setGeneration(generation+1)
         eConceive();
         eKill();
-        updateCanvas();
+        updateCanvas(canvasProps());
     }
 
     const start = () => {
         setGeneration(1);
     }
 
-    const updateCanvas = () => {
-        setCanvas(<Canvas onClick={e => addManually(e)} generation={generation} alive={alive} size={size}/>)
+    const updateCanvas = (newProps) => {
+        setCanvas(<Canvas {...newProps}/>)
     }
       
         
-    return <div class="main">
-        <text>Generation: {generation}</text>
+    return <div class="main" onKeyDown={(e)=>handleKeyPress(e.key)}>
+        <div class="side-menu">
+            <text>Generation: {generation}</text>
+            <div class="button-group">
+                <button onClick={()=> start()}>Start</button>
+                <button onClick={()=> step()}>Step</button>
+                <button onClick={()=> createModel(gun)}>Glider Gun</button>
+                <button onClick={()=> createModel(glider)}>Glider</button>
+                <button onClick={()=> drawBoard()}>Clear Board</button>
+                <button onClick={()=> runtime(fps)} disabled={intervalId}>Run Simulation</button>
+                <button onClick={()=> stop()}>Stop Simulation</button>
+            </div>
+            <div>
+                <text>Speed Control</text>
+                <button onClick={()=> speed(fps+50)} disabled={fps >= 2000}>-</button>
+                <button onClick={()=> speed(fps-50)} disabled={fps <= 50}>+</button>
+            </div>
+        </div>
         {canvas}
-        <div class="button-group">
-            <button onClick={()=> start()}>Start</button>
-            <button onClick={()=> step()}>Step</button>
-            <button onClick={()=> createModel(gun)}>Glider Gun</button>
-            <button onClick={()=> createModel(glider)}>Glider</button>
-            <button onClick={()=> drawBoard()}>Clear Board</button>
-            <button onClick={()=> runtime(fps)} disabled={intervalId}>Run Simulation</button>
-            <button onClick={()=> stop()}>Stop Simulation</button>
-        </div>
-        <div>
-            <text>Speed Control</text>
-            <button onClick={()=> speed(fps+50)} disabled={fps >= 2000}>-</button>
-            <button onClick={()=> speed(fps-50)} disabled={fps <= 50}>+</button>
-        </div>
     </div>
 }
 
