@@ -28,12 +28,6 @@
   color: #61dafb;
 }
 
-.grid {
-  display: flex;
-  flex-wrap: wrap;
-  width: 180px;
-}
-
 .alive {
   width: 10px;
   height: 10px;
@@ -50,17 +44,33 @@
   border-style: solid;
 }
 
+.button-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
 .step {
   position: fixed;
 }
 
-.view {
+.main {
   display: flex;
+  flex-direction: column;
   height: 100vh;
+  width: 100vw;
+  justify-items: center;
   align-items: center;
-  justify-content: center;
-  margin-top: 200px;
+  background-color: rosybrown;
 }
+
+.view {
+  background-color: white;
+  border-style: solid;
+  border-width: 1px;
+  resize: both;
+}
+
 
 @keyframes App-logo-spin {
   from {
