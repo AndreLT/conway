@@ -17,13 +17,16 @@ const Board = () => {
     const [cursorCoord, setCursorCoord] = useState({x:0,y:0});
     const [canvas, setCanvas] = useState(<Canvas cursor={cursorCoord} generation={generation} alive={alive} size={size}/>);
     const [fps, setFps] = useState(300);
+    const [placement, setPlacement] = useState(null);
+    const [pattern, setPattern] = useState(null);
 
     const canvasProps = () => {
         return {
             cursor: cursorCoord,
             generation: generation,
             alive: alive,
-            size: size
+            size: size,
+            model: placement
         }
     }
 
@@ -63,13 +66,20 @@ const Board = () => {
             case 'ArrowLeft':
                 newCursor = {x:cursorCoord.x - 1 ,y:cursorCoord.y}
                 break;
-            case ' ':
-                console.log(`supposed to add cell on coordinates ${cursorCoord.x} x ${cursorCoord.y}`)
+            case 'a':
+                if(placement){
+                    setPlacement(null);
+                    conceiveModel();
+                } else {
+                    alive.set(cursorCoord.x + '-' + cursorCoord.y,{coord:{x:cursorCoord.x, y:cursorCoord.y}}) 
+                }
             default:
                 console.log('key not implemented')
         }
         if(newCursor){
             let {cursor, ...newProps} = canvasProps();
+            if(pattern)
+                drawModel(pattern)
             updateCanvas({cursor: newCursor, ...newProps});
             setCursorCoord(newCursor)
         }
@@ -91,13 +101,20 @@ const Board = () => {
         setFps(news);
     }
 
-    const createModel = (model) => {
+    const conceiveModel = () => {
+        placement.forEach(element => {
+            alive.set(element.x + '-' + element.y, {coord: element})
+        });
+    }
 
-        for(let i=1; i<=model["size"];i++){
-            toLive.set(model[i].x + '-' + model[i].y,model[i])
+    const drawModel = (pattern) => {
+        let blueprint = [];
+        for(let i=1; i<=pattern["size"];i++){
+            blueprint.push({x:pattern[i].x + cursorCoord.x, y:pattern[i].y + cursorCoord.y})
         }
-        eConceive();
-        updateCanvas(canvasProps());
+        setPlacement(blueprint);
+        let {model, ...newProps} = canvasProps();
+        updateCanvas({model: blueprint, ...newProps});
     } 
 
     const eConceive = () => {
@@ -136,6 +153,10 @@ const Board = () => {
         setCanvas(<Canvas {...newProps}/>)
     }
       
+    const placeModel = (model) => {
+        setPattern(model);
+        drawModel(model);
+    }
         
     return <div class="main" onKeyDown={(e)=>handleKeyPress(e.key)}>
         <div class="side-menu">
@@ -143,8 +164,8 @@ const Board = () => {
             <div class="button-group">
                 <button onClick={()=> start()}>Start</button>
                 <button onClick={()=> step()}>Step</button>
-                <button onClick={()=> createModel(gun)}>Glider Gun</button>
-                <button onClick={()=> createModel(glider)}>Glider</button>
+                <button onClick={()=> placeModel(gun)}>Glider Gun</button>
+                <button onClick={()=> placeModel(glider)}>Glider</button>
                 <button onClick={()=> drawBoard()}>Clear Board</button>
                 <button onClick={()=> runtime(fps)} disabled={intervalId}>Run Simulation</button>
                 <button onClick={()=> stop()}>Stop Simulation</button>

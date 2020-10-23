@@ -22,19 +22,32 @@ const Canvas = props => {
     ctx.stroke();
   }
 
+  const drawModel = (ctx) => {
+    props.model.forEach(element => {
+      ctx.beginPath();
+      ctx.rect(element.x*props.size, element.y*props.size, props.size, props.size)
+      ctx.fillStyle = "grey";
+      ctx.fill();
+    })
+  }
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
     //getting canvas width
-    /*let width=window.innerWidth*0.7
+    let width=window.innerWidth*0.7
     let height=window.innerHeight-20
 
     context.canvas.width=width
-    context.canvas.height=height*/
+    context.canvas.height=height
 
     if(props.cursor){
       drawCursor(context);
+    }
+
+    if(props.model){
+      drawModel(context);
     }
 
     draw(context);
