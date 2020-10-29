@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import { render } from 'react-dom';
 
 import Canvas from './canvas'
 
@@ -8,38 +7,40 @@ let gun = require('../models/glider_gun.json');
 let glider = require('../models/glider.json');
 let toLive = new Map();
 let toDie = new Map();
+let data = {};
 
-const Board = () => {
-
-    const [generation, setGeneration] = useState(0);
-    const [intervalId, setIntervalId] = useState(false);
-    const [size, setSize] = useState(10);
-    const [cursorCoord, setCursorCoord] = useState({x:0,y:0});
-    const [canvas, setCanvas] = useState(<Canvas cursor={cursorCoord} generation={generation} alive={alive} size={size}/>);
-    const [fps, setFps] = useState(300);
-    const [placement, setPlacement] = useState(null);
-    const [pattern, setPattern] = useState(null);
-
-    const canvasProps = () => {
-        return {
-            cursor: cursorCoord,
-            generation: generation,
-            alive: alive,
-            size: size,
-            model: placement
-        }
+class Board extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            generation: 0,
+            intervalid: null,
+            size: 10,
+            cursorcoord: {x:0, y:0},
+            canvas: <Canvas alive={alive} size={10} cursor={{x:0, y:0}} />,
+            fps: 300,
+            placement: null,
+            pattern: null,
+            res: null
+       }
     }
 
+    dispatch = () => {
+        let updated = this.state;
+        Object.assign(updated, {...data});
+        Object.assign(updated, {canvas: <Canvas model={updated.placement} size={updated.size} cursor={updated.cursorcoord} alive={alive} />})
+        this.setState({...updated})
+        data = {};
+    }
 
-    const rNeighbours = (element, testdead) => {
-
+    rNeighbours = (element, testdead) => {
         let neighbours = 0;
         for(let i=element.coord.x-1; i<=element.coord.x+1; i++){
             for(let j=element.coord.y-1; j<=element.coord.y+1; j++){
                 if(alive.has(i + '-' + j)){
                     neighbours++;
                 }
-                else if(testdead && rNeighbours({coord:{x: i, y: j}}, false) === 2){
+                else if(testdead && this.rNeighbours({coord:{x: i, y: j}}, false) === 2){
                     toLive.set(i + '-' + j,{x:i, y:j})
                 }
             }
@@ -47,137 +48,140 @@ const Board = () => {
         return neighbours -1;
     }
 
-    const drawBoard = () => {
-        console.log("drew board");
-    }
+    handleKeyPress(key){
 
-    const handleKeyPress = (key) => {
-        let newCursor = null;
+        const updateCursor = (difference) => {
+            /// NEEDS TO VERIFY BOUNDS
+            if(difference.x >= 0 && difference.y >= 0)
+                Object.assign(data, {cursorcoord: difference})
+            if(this.state.pattern){
+                this.drawModel(this.state.pattern, difference);
+            }
+        }
+
         switch(key){
             case 'ArrowUp':
-                newCursor = {x:cursorCoord.x ,y:cursorCoord.y - 1}
+                updateCursor({x:this.state.cursorcoord.x ,y:this.state.cursorcoord.y - 1})
                 break;
             case 'ArrowDown':
-                newCursor = {x:cursorCoord.x ,y:cursorCoord.y + 1}
+                updateCursor({x:this.state.cursorcoord.x ,y:this.state.cursorcoord.y + 1})
                 break;
             case 'ArrowRight':
-                newCursor = {x:cursorCoord.x + 1 ,y:cursorCoord.y}
+                updateCursor({x:this.state.cursorcoord.x + 1 ,y:this.state.cursorcoord.y})
                 break;
             case 'ArrowLeft':
-                newCursor = {x:cursorCoord.x - 1 ,y:cursorCoord.y}
+                updateCursor({x:this.state.cursorcoord.x - 1 ,y:this.state.cursorcoord.y})
                 break;
             case 'a':
-                if(placement){
-                    setPlacement(null);
-                    conceiveModel();
+                if(this.state.placement){
+                    this.conceiveModel();
+                    Object.assign(data, {placement: null, pattern: null})
                 } else {
-                    alive.set(cursorCoord.x + '-' + cursorCoord.y,{coord:{x:cursorCoord.x, y:cursorCoord.y}}) 
+                    let coord = this.state.cursorcoord;
+                    alive.set(coord.x + '-' + coord.y,{coord:{x:coord.x, y:coord.y}}) 
                 }
-            default:
-                console.log('key not implemented')
         }
-        if(newCursor){
-            let {cursor, ...newProps} = canvasProps();
-            if(pattern)
-                drawModel(pattern)
-            updateCanvas({cursor: newCursor, ...newProps});
-            setCursorCoord(newCursor)
-        }
+        this.dispatch();
     }
 
-    const runtime = (speed) => {
-        const intId = window.setInterval(() => step(), speed);
-        setIntervalId(intId);
+    runtime = (speed) => {
+        const id = window.setInterval(() => this.step(), speed);
+        this.setState({intervalid: id})
     }
 
-    const stop = () => {
-        clearInterval(intervalId);
-        setIntervalId(false);
+    stop = () => {
+        clearInterval(this.state.intervalid);
+        this.setState({intervalid: null})
     }
 
-    const speed = (news) => {
-        stop();
-        runtime(news);
-        setFps(news);
+    speed = (news) => {
+        this.stop();
+        this.runtime(news);
+        this.setState({fps: news})
     }
 
-    const conceiveModel = () => {
-        placement.forEach(element => {
+    conceiveModel = () => {
+        this.state.placement.forEach(element => {
             alive.set(element.x + '-' + element.y, {coord: element})
         });
     }
 
-    const drawModel = (pattern) => {
+    drawModel = (pattern, coordinates) => {
         let blueprint = [];
         for(let i=1; i<=pattern["size"];i++){
-            blueprint.push({x:pattern[i].x + cursorCoord.x, y:pattern[i].y + cursorCoord.y})
+            blueprint.push({x:pattern[i].x + coordinates.x, y:pattern[i].y + coordinates.y})
         }
-        setPlacement(blueprint);
-        let {model, ...newProps} = canvasProps();
-        updateCanvas({model: blueprint, ...newProps});
+        Object.assign(data, {placement: blueprint, cursorcoord: coordinates});
     } 
 
-    const eConceive = () => {
+    eConceive = () => {
         for (let [key, value] of toLive) {
             alive.set(key, {coord: value})
         }
         toLive.clear();
     }
 
-    const eKill = () => {
+    eKill = () => {
         for (let [key, value] of toDie) {
             alive.delete(key)
         }
         toDie.clear();
     }
 
-    const step = () => {
+    step = () => {
         
         for (let [key, value] of alive) {
-            let neighbours = rNeighbours(value, true);
+            let neighbours = this.rNeighbours(value, true);
 
             if(neighbours > 3 || neighbours < 2)
                 toDie.set(key, value);
         };
-        setGeneration(generation+1)
-        eConceive();
-        eKill();
-        updateCanvas(canvasProps());
-    }
 
-    const start = () => {
-        setGeneration(1);
-    }
-
-    const updateCanvas = (newProps) => {
-        setCanvas(<Canvas {...newProps}/>)
+        Object.assign(data, {generation: this.state.generation+1})
+        this.eConceive();
+        this.eKill();
+        this.dispatch();
     }
       
-    const placeModel = (model) => {
-        setPattern(model);
-        drawModel(model);
+    placeModel = (model) => {
+        Object.assign(data, {pattern: model})
+        this.drawModel(model, data.cursorcoord ? data.cursorcoord : this.state.cursorcoord);
+        this.dispatch();
     }
-        
-    return <div class="main" onKeyDown={(e)=>handleKeyPress(e.key)}>
-        <div class="side-menu">
-            <text>Generation: {generation}</text>
-            <div class="button-group">
-                <button onClick={()=> start()}>Start</button>
-                <button onClick={()=> step()}>Step</button>
-                <button onClick={()=> placeModel(gun)}>Glider Gun</button>
-                <button onClick={()=> placeModel(glider)}>Glider</button>
-                <button onClick={()=> drawBoard()}>Clear Board</button>
-                <button onClick={()=> runtime(fps)} disabled={intervalId}>Run Simulation</button>
-                <button onClick={()=> stop()}>Stop Simulation</button>
+
+    updateWindowDimensions = () => {
+        this.setState({res: {width: window.innerWidth, height: window.innerHeight}});
+    }
+
+    componentDidMount(){
+        window.addEventListener('resize', this.updateWindowDimensions());
+    }
+
+    componentWillUnmount(){
+        window.removeEventListener('resize', this.updateWindowDimensions());
+    }
+    
+    render() {
+
+        return <div class="main" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
+            <div class="side-menu">
+                <text>Generation: {this.state.generation}</text>
+                <div class="button-group">
+                    <button onClick={()=> this.step()}>Step</button>
+                    <button onClick={()=> this.placeModel(gun)}>Glider Gun</button>
+                    <button onClick={()=> this.placeModel(glider)}>Glider</button>
+                    <button onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}>Run Simulation</button>
+                    <button onClick={()=> this.stop()}>Stop Simulation</button>
+                </div>
+                <div>
+                    <text>Speed Control</text>
+                    <button onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 2000}>-</button>
+                    <button onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}>+</button>
+                </div>
             </div>
-            <div>
-                <text>Speed Control</text>
-                <button onClick={()=> speed(fps+50)} disabled={fps >= 2000}>-</button>
-                <button onClick={()=> speed(fps-50)} disabled={fps <= 50}>+</button>
-            </div>
+            {this.state.canvas}
         </div>
-        {canvas}
-    </div>
+    }
 }
 
 export default Board;

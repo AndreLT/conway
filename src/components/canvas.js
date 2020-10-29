@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 
 const Canvas = props => {
   const canvasRef = useRef(null);
@@ -11,6 +11,7 @@ const Canvas = props => {
 
       ctx.beginPath();
       ctx.rect(x, y, props.size-1, props.size-1);
+      ctx.fillStyle = "black";
       ctx.fill();
     }
   }
@@ -25,8 +26,8 @@ const Canvas = props => {
   const drawModel = (ctx) => {
     props.model.forEach(element => {
       ctx.beginPath();
-      ctx.rect(element.x*props.size, element.y*props.size, props.size, props.size)
-      ctx.fillStyle = "grey";
+      ctx.rect(element.x*props.size, element.y*props.size, props.size-1, props.size-1)
+      ctx.fillStyle = "#BBAAAA";
       ctx.fill();
     })
   }
@@ -35,12 +36,11 @@ const Canvas = props => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    //getting canvas width
-    let width=window.innerWidth*0.7
-    let height=window.innerHeight-20
+    //getting canvas side size
+    let side=window.innerHeight-20
 
-    context.canvas.width=width
-    context.canvas.height=height
+    context.canvas.width=side
+    context.canvas.height=side
 
     if(props.cursor){
       drawCursor(context);
