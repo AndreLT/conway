@@ -37,7 +37,7 @@ const Canvas = props => {
     const context = canvas.getContext('2d');
 
     //getting canvas side size
-    let side=window.innerHeight-20
+    let side=window.innerHeight-40
 
     context.canvas.width=side
     context.canvas.height=side
@@ -54,7 +54,7 @@ const Canvas = props => {
   })
 
   
-  return <canvas id="board" class="view" ref={canvasRef} {...props}/>
+  return <canvas id="board" class="m-auto p-2 bg-white rounded-lg shadow-neu" ref={canvasRef} {...props}/>
 }
 
 export default Canvas

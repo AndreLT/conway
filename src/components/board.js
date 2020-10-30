@@ -163,11 +163,11 @@ class Board extends React.Component {
     
     render() {
 
-        return <div class="main" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
-            <div class="side-menu">
+        return <div class="container flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
+            <div class="px-4 bg-gray-200 mr-4 shadow-2xl">
                 <text>Generation: {this.state.generation}</text>
-                <div class="button-group">
-                    <button onClick={()=> this.step()}>Step</button>
+                <div class="">
+                    <button class="py-2 px-4 rounded" onClick={()=> this.step()}>></button>
                     <button onClick={()=> this.placeModel(gun)}>Glider Gun</button>
                     <button onClick={()=> this.placeModel(glider)}>Glider</button>
                     <button onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}>Run Simulation</button>
