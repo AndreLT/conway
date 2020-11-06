@@ -1,4 +1,6 @@
 function Alive(){
+    this.bounds = 0;
+
     this.generation = new Map();
 
     this.scan = () => {
@@ -6,7 +8,8 @@ function Alive(){
         let toDie = [];
 
         for (let [key, value] of this.generation) {
-            let neighbours = this.neighbours(value, true);
+            let adjustedToBounds = this.boundAdjusted(value)
+            let neighbours = this.neighbours(adjustedToBounds, true);
 
             if(neighbours[0] > 3 || neighbours[0] < 2)
                 toDie.push(key);
@@ -25,19 +28,36 @@ function Alive(){
         }
     };
 
+    this.boundAdjusted = (coordinates) => {
+        let newcoordinates = coordinates
+
+        if(coordinates.x < 0)
+            newcoordinates.x = this.bounds
+        else if(coordinates.x > this.bounds)
+            newcoordinates.x = 0
+
+        if(coordinates.y < 0)
+            newcoordinates.y = this.bounds
+        else if(coordinates.y > this.bounds)
+            newcoordinates.y = 0
+
+        return newcoordinates
+    }
+
     this.neighbours = (element, testdead) => {
         let neighbours = 0;
         let toLive = [];
 
         for(let i=element.x-1; i<=element.x+1; i++){
             for(let j=element.y-1; j<=element.y+1; j++){
-                if(this.generation.has(i + '-' + j)){
+                let adjustedNeighbour = this.boundAdjusted({x:i, y:j})
+                if(this.generation.has(adjustedNeighbour.x + '-' + adjustedNeighbour.y)){
                     neighbours++;
                 }
                 else if(testdead){
-                    let [dneighbours, _] = this.neighbours({x: i, y: j}, false)
+                    let [dneighbours, _] = this.neighbours(adjustedNeighbour, false)
                     if(dneighbours === 2)
-                        toLive.push({x:i, y:j})
+                        toLive.push({x:adjustedNeighbour.x, y:adjustedNeighbour.y})
                 }
             }
         }
@@ -46,11 +66,13 @@ function Alive(){
     };
 
     this.conceiveModel = (model, cursor) => {
+        let entries = Object.entries(model)
+        let adjustedCoord = {x:cursor.x+1, y:cursor.y+1}
         let x;
         let y;
-        for (let [key, value] of Object.entries(model)) {
-            x = value.x + cursor.x
-            y = value.y + cursor.y
+        for (let i=0;i<entries.length-1;i++) {
+            x = entries[i][1].x+adjustedCoord.x
+            y = entries[i][1].y+adjustedCoord.y
             this.generation.set(x + '-' + y, {x: x, y: y})
         };
     };

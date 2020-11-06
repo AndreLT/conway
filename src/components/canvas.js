@@ -55,14 +55,34 @@ function Canvas(ref, context, size, dimentions){
     this.ctx.stroke();
   }
 
-  this.drawModel = (model, coord) => {
-    for (let [key, value] of Object.entries(model)) {
-      this.ctx.beginPath();
-      this.ctx.rect((value.x+coord.x)*this.size, (value.y+coord.y)*this.size, this.size-1, this.size-1)
-      this.ctx.fillStyle = "#BBAAAA";
-      this.ctx.fill();
+  this.drawModel = (model, coord, color) => {
+    let entries = Object.entries(model)
+    let adjustedCoord = {x:coord.x+1, y:coord.y+1}
+
+    this.ctx.beginPath();
+    this.ctx.globalAlpha = 0.4;
+    this.ctx.fillStyle = color;
+
+    for (let i=0;i<entries.length-1;i++) {
+      this.ctx.rect((entries[i][1].x+adjustedCoord.x)*this.size, (entries[i][1].y+adjustedCoord.y)*this.size, this.size, this.size)
     }
+    
+    this.ctx.fill();
+    this.ctx.globalAlpha = 0.2;
+    this.ctx.rect((adjustedCoord.x)*this.size, (adjustedCoord.y)*this.size, model["area"].x*this.size, model["area"].y*this.size);
+    this.ctx.fill();
+
+    this.ctx.globalAlpha = 1.0;
   }
+
+  this.checkModelBound = (difference, model, bounds) => {
+    let patternArea = model["area"];
+
+    if(patternArea.x+difference.x > bounds || patternArea.y+difference.y > bounds){
+        return false;
+    }
+    return true;
+}
 
   this.clear = () => {
     this.ctx.clearRect(0,0,this.dimentions, this.dimentions);
