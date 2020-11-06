@@ -1,63 +1,58 @@
-import React, {useState, useEffect} from 'react';
+import React from 'react';
 import {FaPlay, FaStepForward, FaPause, FaForward, FaBackward} from 'react-icons/fa'
 
 import Canvas from './canvas'
+import Alive from './alive'
 
-let alive = new Map();
-let gun = require('../models/glider_gun.json');
-let glider = require('../models/glider.json');
-let toLive = new Map();
-let toDie = new Map();
-let data = {};
 
 class Board extends React.Component {
     constructor(props) {
         super(props);
+
+        this.alive = new Alive();
+        this.canvas = null; //initiated on component mount
+        this.gridCanvas = null; //initiated on component mount
+        this.cursorCanvas = null; //initiated on component mount
+        this.gridRef = React.createRef();
+        this.boardRef = React.createRef();
+        this.cursorRef = React.createRef();
+        this.gun = require('../models/glider_gun.json');
+        this.glider = require('../models/glider.json');
+        this.data = {};
+
         this.state = {
             generation: 0,
             intervalid: null,
             size: 10,
             cursorcoord: {x:0, y:0},
-            canvas: <Canvas alive={alive} size={10} cursor={{x:0, y:0}} />,
             fps: 300,
-            placement: null,
             pattern: null,
-            res: null
-       }
+            res: null,
+            capturing: null,
+       };
     }
 
     dispatch = () => {
         let updated = this.state;
-        Object.assign(updated, {...data});
-        Object.assign(updated, {canvas: <Canvas model={updated.placement} size={updated.size} cursor={updated.cursorcoord} alive={alive} />})
+        Object.assign(updated, {...this.data});
         this.setState({...updated})
-        data = {};
-    }
-
-    rNeighbours = (element, testdead) => {
-        let neighbours = 0;
-        for(let i=element.coord.x-1; i<=element.coord.x+1; i++){
-            for(let j=element.coord.y-1; j<=element.coord.y+1; j++){
-                if(alive.has(i + '-' + j)){
-                    neighbours++;
-                }
-                else if(testdead && this.rNeighbours({coord:{x: i, y: j}}, false) === 2){
-                    toLive.set(i + '-' + j,{x:i, y:j})
-                }
-            }
-        }
-        return neighbours -1;
+        this.data = {};
     }
 
     handleKeyPress(key){
 
         const updateCursor = (difference) => {
             /// NEEDS TO VERIFY BOUNDS
+            this.cursorCanvas.drawCursor(difference);
             if(difference.x >= 0 && difference.y >= 0)
-                Object.assign(data, {cursorcoord: difference})
+                Object.assign(this.data, {cursorcoord: difference})
             if(this.state.pattern){
-                this.drawModel(this.state.pattern, difference);
+                this.cursorCanvas.drawModel(this.state.pattern, difference);
             }
+            if(this.state.capturing){
+                this.cursorCanvas.drawCaptureArea(this.state.capturing, difference)
+            }
+            this.setState({cursorcoord: difference});
         }
 
         switch(key){
@@ -74,13 +69,29 @@ class Board extends React.Component {
                 updateCursor({x:this.state.cursorcoord.x - 1 ,y:this.state.cursorcoord.y})
                 break;
             case 'a':
-                if(this.state.placement){
-                    this.conceiveModel();
-                    Object.assign(data, {placement: null, pattern: null})
+                if(this.state.pattern){
+                    this.alive.conceiveModel(this.state.pattern, this.state.cursorcoord);
+                    this.cursorCanvas.clear();
+                    Object.assign(this.data, {pattern: null});
                 } else {
                     let coord = this.state.cursorcoord;
-                    alive.set(coord.x + '-' + coord.y,{coord:{x:coord.x, y:coord.y}}) 
+                    this.alive.generation.set(coord.x + '-' + coord.y,{x:coord.x, y:coord.y}) 
                 }
+                this.canvas.draw(this.alive.generation);
+                break;
+            case 'e':
+                if(this.state.capturing){
+                    const creation = this.capture(this.state.cursorcoord)
+                    const name = prompt("How will your creation be called?")
+                    localStorage.setItem(name, JSON.stringify(creation))
+                }else{
+                    Object.assign(this.data, {capturing: this.state.cursorcoord});
+                }
+                break;
+            case 'c':
+                Object.assign(this.data, {capturing: null });
+                this.cursorCanvas.drawCursor();
+                break;
         }
         this.dispatch();
     }
@@ -101,62 +112,34 @@ class Board extends React.Component {
         this.setState({fps: news})
     }
 
-    conceiveModel = () => {
-        this.state.placement.forEach(element => {
-            alive.set(element.x + '-' + element.y, {coord: element})
-        });
-    }
+    capture = (end) => {
+        const start = this.state.capturing;
+        const blueprint = {};
+        let counter = 1;
 
-    drawModel = (pattern, coordinates) => {
-        let blueprint = [];
-        for(let i=1; i<=pattern["size"];i++){
-            blueprint.push({x:pattern[i].x + coordinates.x, y:pattern[i].y + coordinates.y})
+        for(let i=start.x; i<=end.x; i++){
+            for(let j=start.y; j<=end.y; j++){
+                if(this.alive.generation.has(i + '-' + j)){ 
+                    blueprint[counter] = {x:i-start.x, y:j-start.y};
+                    counter++
+                }
+            }
         }
-        Object.assign(data, {placement: blueprint, cursorcoord: coordinates});
-    } 
-
-    eConceive = () => {
-        for (let [key, value] of toLive) {
-            alive.set(key, {coord: value})
-        }
-        toLive.clear();
-    }
-
-    eKill = () => {
-        for (let [key, value] of toDie) {
-            alive.delete(key)
-        }
-        toDie.clear();
+        blueprint['size'] = counter-1;
+        return(blueprint);
     }
 
     step = () => {
-
-        if(alive.size){
-            for (let [key, value] of alive) {
-                let neighbours = this.rNeighbours(value, true);
-                
-                if(neighbours > 3 || neighbours < 2)
-                    toDie.set(key, value);
-            };
-            
-            if(toDie.size && toLive.size){
-                Object.assign(data, {generation: this.state.generation+1})
-                this.eConceive();
-                this.eKill();
-            }else{
-                alert("Stable")
-                this.stop();
-            }
-            
-        }else{
+        if(!this.alive.scan()){
             this.stop();
         }
-            this.dispatch();
+        this.canvas.draw(this.alive.generation);
+        this.dispatch();
     }
       
     placeModel = (model) => {
-        Object.assign(data, {pattern: model})
-        this.drawModel(model, data.cursorcoord ? data.cursorcoord : this.state.cursorcoord);
+        Object.assign(this.data, {pattern: model})
+        this.cursorCanvas.drawModel(model, this.state.cursorcoord);
         this.dispatch();
     }
 
@@ -171,16 +154,40 @@ class Board extends React.Component {
         
     }
 
-    updateWindowDimensions = () => {
-        this.setState({res: {width: window.innerWidth, height: window.innerHeight}});
+    handleCustom = (name) => {
+       let custom = localStorage.getItem(name)
+
+       this.placeModel({...JSON.parse(custom)})
+    }
+
+    initCanvas(){
+        let resolution = window.innerHeight - 40;
+        this.canvas.ctx.canvas.width=resolution;
+        this.canvas.ctx.canvas.height=resolution;
+
+        this.gridCanvas.ctx.canvas.width=resolution;
+        this.gridCanvas.ctx.canvas.height=resolution;
+
+        this.cursorCanvas.ctx.canvas.width=resolution;
+        this.cursorCanvas.ctx.canvas.height=resolution;
+
+        this.gridCanvas.drawGrid();
+        this.cursorCanvas.drawCursor(this.state.cursorcoord);
+        this.canvas.draw(this.alive.generation);
+
+
     }
 
     componentDidMount(){
-        window.addEventListener('resize', this.updateWindowDimensions());
+        this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, window.innerHeight-40);
+        this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, window.innerHeight-40);
+        this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, window.innerHeight-40);
+
+        window.addEventListener('resize', this.initCanvas());
     }
 
     componentWillUnmount(){
-        window.removeEventListener('resize', this.updateWindowDimensions());
+        window.removeEventListener('resize', this.initCanvas());
     }
     
     render() {
@@ -218,13 +225,17 @@ class Board extends React.Component {
                         <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
                     </div>
                     <div class="w-11/12 h-56 mx-auto mt-5 bg-grey-200 rounded-md shadow-neuinner">
-                        <button onClick={()=> this.placeModel(gun)}>Glider Gun</button>
-                        <button onClick={()=> this.placeModel(glider)}>Glider</button>
+                        <button onClick={()=> this.placeModel(this.gun)}>Glider Gun</button>
+                        <button onClick={()=> this.placeModel(this.glider)}>Glider</button>
+                        <button onClick={()=> this.handleCustom('SteS2')}>Test</button>
                     </div>
+                    <button onClick={()=> Canvas.test}>Test</button>
                 </div>
             </div>
             <div class="m-auto">
-                {this.state.canvas}
+                <canvas id="board" class={"p-2 bg-transparent absolute"} ref={this.boardRef}/>
+                <canvas id="cursor" class={"p-2 bg-transparent absolute"} ref={this.cursorRef} />
+                <canvas id="grid" class={"p-2 bg-white rounded-lg shadow-neusm"} ref={this.gridRef} />
             </div>
         </div>
     }

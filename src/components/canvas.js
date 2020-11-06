@@ -1,81 +1,72 @@
-import React, { useRef, useEffect } from 'react'
+function Canvas(ref, context, size, dimentions){
+  this.ref = ref;
+  this.ctx = context;
+  this.size = size;
+  this.dimentions = dimentions;
+  this.background = document.createElement('canvas');
 
-const Canvas = props => {
-  const canvasRef = useRef(null);
-  let _context = null;
+  this.draw = (alive) => {  
 
-  const draw = (ctx) => {
-    
-    for (let [key, value] of props.alive) {
-      const x = value.coord.x*props.size;
-      const y = value.coord.y*props.size;
+    this.clear();
+    for (let [key, value] of alive) {
+      const x = value.x*this.size;
+      const y = value.y*this.size;
 
-      ctx.beginPath();
-      ctx.rect(x, y, props.size-1, props.size-1);
-      ctx.fillStyle = "black";
-      ctx.fill();
+      this.ctx.beginPath();
+      this.ctx.rect(x, y, this.size-1, this.size-1);
+      this.ctx.fillStyle = "black";
+      this.ctx.fill();
     }
   }
 
-  const drawGrid = (dimentions, ctx) => {
-    const limit = Math.floor(dimentions/props.size);
+  this.drawCaptureArea = (capture, cursor) => {
+    this.clear();
+    this.ctx.beginPath();
+    this.ctx.fillStyle = "blue";
+    this.ctx.globalAlpha = 0.3;
+    this.ctx.rect(capture.x*this.size, capture.y*this.size, (cursor.x - capture.x)*this.size,(cursor.y - capture.y + 1)*this.size);
+    this.ctx.fill();
+    this.ctx.globalAlpha = 1.0;
 
-    ctx.lineWidth = 1;
-    ctx.beginPath();
+  }
+
+  this.drawGrid = () => {
+    const limit = Math.floor(this.dimentions/this.size);
+
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
     for(let i=0; i<=limit;i++){
-      let scaled = i*props.size
-      ctx.moveTo(0, scaled);
-      ctx.lineTo(dimentions, scaled);
-      ctx.moveTo(scaled,0);
-      ctx.lineTo(scaled, dimentions);
+      let scaled = i*this.size
+      this.ctx.moveTo(0, scaled);
+      this.ctx.lineTo(dimentions, scaled);
+      this.ctx.moveTo(scaled,0);
+      this.ctx.lineTo(scaled, dimentions);
     }
-    ctx.strokeStyle = "lightgray"
+    this.ctx.strokeStyle = "lightgray"
 
-    ctx.stroke();
+    this.ctx.stroke();
   }
 
-  const drawCursor = (ctx) => {
-    ctx.beginPath();
-    ctx.rect(props.cursor.x*props.size, props.cursor.y*props.size, props.size, props.size);
-    ctx.strokeStyle = "red";
-    ctx.stroke();
+  this.drawCursor = (cursor) => {
+    this.clear();
+    this.ctx.beginPath();
+    this.ctx.rect(cursor.x*this.size, cursor.y*this.size, this.size, this.size);
+    this.ctx.strokeStyle = "red";
+    this.ctx.stroke();
   }
 
-  const drawModel = (ctx) => {
-    props.model.forEach(element => {
-      ctx.beginPath();
-      ctx.rect(element.x*props.size, element.y*props.size, props.size-1, props.size-1)
-      ctx.fillStyle = "#BBAAAA";
-      ctx.fill();
-    })
+  this.drawModel = (model, coord) => {
+    for (let [key, value] of Object.entries(model)) {
+      this.ctx.beginPath();
+      this.ctx.rect((value.x+coord.x)*this.size, (value.y+coord.y)*this.size, this.size-1, this.size-1)
+      this.ctx.fillStyle = "#BBAAAA";
+      this.ctx.fill();
+    }
   }
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    _context = context;
-
-    //getting canvas side size
-    let side=window.innerHeight-40
-
-    context.canvas.width=side
-    context.canvas.height=side
-
-    drawGrid(side, context);
-
-    if(props.cursor){
-      drawCursor(context);
-    }
-    
-    if(props.model){
-      drawModel(context);
-    }
-
-    draw(context);
-  })
-
-  
-  return <canvas id="board" class="p-2 bg-white rounded-lg shadow-neusm" ref={canvasRef} {...props}/>
+  this.clear = () => {
+    this.ctx.clearRect(0,0,this.dimentions, this.dimentions);
+  }
 }
 
 export default Canvas
