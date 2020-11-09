@@ -1,5 +1,5 @@
 import React from 'react';
-import {FaPlay, FaStepForward, FaPause, FaForward, FaBackward} from 'react-icons/fa'
+import {FaPlay, FaStepForward, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6} from 'react-icons/fa'
 
 import Canvas from './canvas'
 import Alive from './alive'
@@ -30,7 +30,7 @@ class Board extends React.Component {
             patternLegal: true,
             res: null,
             capturing: null,
-
+            menuOut: true,
        };
     }
 
@@ -58,6 +58,19 @@ class Board extends React.Component {
             Object.assign(this.data, {cursorcoord: boundAdjusted});
         }
 
+        const rotatePattern = () => {
+            let entries = Object.entries(this.state.pattern);
+            let area = this.state.pattern["area"];
+            let rotated = {};
+            console.log(this.state.pattern)
+            for (let i=0;i<=entries.length-2;i++) {
+                rotated[i] = {x:area.y-entries[i][1].y-1,y:entries[i][1].x}
+            }
+
+            rotated.area = {x:area.y, y:area.x}
+            this.handleModel(rotated)
+        }
+
         switch(key){
             case 'ArrowUp':
                 updateCursor({x:this.state.cursorcoord.x ,y:this.state.cursorcoord.y - 1})
@@ -72,13 +85,13 @@ class Board extends React.Component {
                 updateCursor({x:this.state.cursorcoord.x - 1 ,y:this.state.cursorcoord.y})
                 break;
             case 'a':
-                if(this.state.pattern)
+                if(this.state.pattern){
                     if(this.cursorCanvas.checkModelBound(this.state.cursorcoord, this.state.pattern, this.alive.bounds)){
                         this.alive.conceiveModel(this.state.pattern, this.state.cursorcoord);
                         this.cursorCanvas.clear();
                         Object.assign(this.data, {pattern: null});
                     }
-                else {
+                } else {
                     let coord = this.state.cursorcoord;
                     this.alive.generation.set(coord.x + '-' + coord.y,{x:coord.x, y:coord.y}) 
                 }
@@ -94,11 +107,19 @@ class Board extends React.Component {
                 }
                 break;
             case 'c':
-                Object.assign(this.data, {capturing: null });
-                this.cursorCanvas.drawCursor();
+                Object.assign(this.data, {capturing: null, pattern: null });
+                this.cursorCanvas.drawCursor(this.state.cursorcoord);
+                break;
+            case 'r':
+                rotatePattern();
                 break;
         }
         this.dispatch();
+    }
+
+    randomize = () => {
+        this.alive.randomizeBoard();
+        this.canvas.draw(this.alive.generation);
     }
 
     runtime = (speed) => {
@@ -145,6 +166,7 @@ class Board extends React.Component {
     handleModel = (model) => {
         Object.assign(this.data, {pattern: model});
         this.placeModel(this.state.cursorcoord, model, this.alive.bounds);
+        this.dispatch();
     }
 
     placeModel = (coordinates, model, bounds) => {
@@ -163,35 +185,34 @@ class Board extends React.Component {
         
     }
 
-    handleCustom = (name) => {
-       let custom = localStorage.getItem(name)
-
-       this.placeModel({...JSON.parse(custom)})
-    }
-
     initCanvas(){
-        let resolution = Math.floor((window.innerHeight - 40)/this.state.size)*this.state.size;
-        this.canvas.ctx.canvas.width=resolution;
-        this.canvas.ctx.canvas.height=resolution;
+        let height = this.alive.bounds.y*this.state.size;
+        let width = this.alive.bounds.x*this.state.size;
+        this.canvas.ctx.canvas.width=width;
+        this.canvas.ctx.canvas.height=height;
 
-        this.gridCanvas.ctx.canvas.width=resolution;
-        this.gridCanvas.ctx.canvas.height=resolution;
+        this.gridCanvas.ctx.canvas.width=width;
+        this.gridCanvas.ctx.canvas.height=height;
 
-        this.cursorCanvas.ctx.canvas.width=resolution;
-        this.cursorCanvas.ctx.canvas.height=resolution;
+        this.cursorCanvas.ctx.canvas.width=width;
+        this.cursorCanvas.ctx.canvas.height=height;
 
         this.gridCanvas.drawGrid();
         this.cursorCanvas.drawCursor(this.state.cursorcoord);
         this.canvas.draw(this.alive.generation);
-
     }
 
     componentDidMount(){
-        this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, window.innerHeight-40);
-        this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, window.innerHeight-40);
-        this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, window.innerHeight-40);
+        let canvasWidth = window.innerWidth-100;
+        let canvasHeight = window.innerHeight-100;
+        this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
+        this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
+        this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
 
-        this.alive.bounds = Math.floor((window.innerHeight-40)/this.state.size)-1
+        let width = Math.floor(canvasWidth/this.state.size);
+        let height = Math.floor(canvasHeight/this.state.size);
+        this.alive.bounds = {x: width, y: height};
+        
 
         window.addEventListener('resize', this.initCanvas());
     }
@@ -202,51 +223,55 @@ class Board extends React.Component {
     
     render() {
 
-        return <div class="bg-gray-100 flex justify-between h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
-            <div class="px-4 w-2/6 flex flex-col bg-gray-100 mr-4 shadow-2xl">
-                <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 font-semibold font-mono shadow-screen">
-                    <div class="flex justify-between">
-                        <text class={!this.state.intervalid && "opacity-20 text-size-10"}>Auto</text>
-                        <text class={this.state.intervalid && "opacity-20"}>Paused</text>
-                    </div>
-                    <div class="flex justify-between my-2 proportional-nums">
-                        <text>Generation</text>
-                        <text>{this.state.generation}</text>
-                    </div>
-                    <div class="flex justify-between my-2 proportional-nums">
-                        <div>
-                            <text>Speed</text>
-                            <div class="flex">{this.speedDisplay()}</div>
+        return <div class="bg-gray-100 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
+            <div class="flex flex-row w-full h-full m-auto relative">
+            <button class="absolute px-4 py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals color={"#aaa"}/></button>
+                <div class="flex relative m-auto">
+                    <canvas id="board" class={"p-2 bg-transparent m-auto absolute"} ref={this.boardRef} />
+                    <canvas id="cursor" class={"p-2 bg-transparent m-auto absolute"} ref={this.cursorRef} />
+                    <canvas id="grid" class={"p-2 bg-transparent"} ref={this.gridRef} />
+                </div>
+                <div class={`flex flex-col w-2/6 h-full bg-gray-100 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                        <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 font-semibold font-mono shadow-screen">
+                            <div class="flex justify-between">
+                                <text class={!this.state.intervalid && "opacity-20 text-size-10"}>Auto</text>
+                                <text class={this.state.intervalid && "opacity-20"}>Paused</text>
+                            </div>
+                            <div class="flex justify-between my-2 proportional-nums">
+                                <text>Generation</text>
+                                <text>{this.state.generation}</text>
+                            </div>
+                            <div class="flex justify-between my-2 proportional-nums">
+                                <div>
+                                    <text>Speed</text>
+                                    <div class="flex">{this.speedDisplay()}</div>
+                                </div>
+                                <div class="flex flex-col">
+                                    <text>{(1000/this.state.fps).toFixed(2)} Gen./s</text>
+                                    <text class="text-sm">{`x: ${this.state.cursorcoord.x}, y: ${this.state.cursorcoord.y}`}</text>
+                                </div>
+                            </div>
                         </div>
                         <div class="flex flex-col">
-                            <text>{(1000/this.state.fps).toFixed(2)} Gen./s</text>
-                            <text class="text-sm">{`x: ${this.state.cursorcoord.x}, y: ${this.state.cursorcoord.y}`}</text>
+                            <div class="flex justify-between">
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-neusm focus:shadow-screen`} onClick={()=> this.step()}><FaStepForward size={20} /></button>
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-screen' : 'shadow-neusm'}`} onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-neusm' : 'shadow-screen'}`} onClick={()=> this.stop()}><FaPause size={20} /></button>
+                            </div>
+                            <div class="flex justify-between p-4">
+                                <button class="my-auto" onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 750}><FaBackward /></button>
+                                <div class="h-10 px-2 rounded-full shadow-neuinner w-4/5 bg-gray-200">
+                                    <div class={`transition duration-200 ease-in-out h-6 w-${(750-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
+                                </div>
+                                <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
+                            </div>
+                            <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
+                            <div class="w-11/12 h-56 mx-auto mt-5 bg-gray-200 rounded-md shadow-neuinner">
+                                <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 mx-2 shadow-neusm focus:shadow-screen`}>Glider Gun</button>
+                                <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Glider</button>
+                            </div>
                         </div>
-                    </div>
                 </div>
-                <div class="flex flex-col">
-                    <div class="flex justify-between">
-                        <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-neusm focus:shadow-screen`} onClick={()=> this.step()}><FaStepForward size={20} /></button>
-                        <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-screen' : 'shadow-neusm'}`} onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
-                        <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-neusm' : 'shadow-screen'}`} onClick={()=> this.stop()}><FaPause size={20} /></button>
-                    </div>
-                    <div class="flex justify-between p-4">
-                        <button class="my-auto" onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 750}><FaBackward /></button>
-                        <div class="h-10 px-2 rounded-full shadow-neuinner w-4/5 bg-gray-200">
-                            <div class={`transition duration-200 ease-in-out h-6 w-${(750-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
-                        </div>
-                        <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
-                    </div>
-                    <div class="w-11/12 h-56 mx-auto mt-5 bg-gray-200 rounded-md shadow-neuinner">
-                        <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 mx-2 shadow-neusm focus:shadow-screen`}>Glider Gun</button>
-                        <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Glider</button>
-                    </div>
-                </div>
-            </div>
-            <div class="m-auto">
-                <canvas id="board" class={"p-2 bg-transparent absolute"} ref={this.boardRef}/>
-                <canvas id="cursor" class={"p-2 bg-transparent absolute"} ref={this.cursorRef} />
-                <canvas id="grid" class={"p-2 bg-white rounded-lg shadow-neusm"} ref={this.gridRef} />
             </div>
         </div>
     }

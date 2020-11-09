@@ -31,20 +31,23 @@ function Canvas(ref, context, size, dimentions){
   }
 
   this.drawGrid = () => {
-    const limit = Math.floor(this.dimentions/this.size);
+    const limitX = Math.floor(this.dimentions.width/this.size);
+    const limitY = Math.floor(this.dimentions.height/this.size);
 
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
-    for(let i=0; i<=limit;i++){
-      let scaled = i*this.size
-      this.ctx.moveTo(0, scaled);
-      this.ctx.lineTo(dimentions, scaled);
-      this.ctx.moveTo(scaled,0);
-      this.ctx.lineTo(scaled, dimentions);
-    }
     this.ctx.strokeStyle = "lightgray"
-
+    for(let i=0; i<=limitX;i++){
+      let scaled = i*this.size;
+      this.ctx.moveTo(0, scaled);
+      this.ctx.lineTo(this.dimentions.width, scaled);
+      this.ctx.moveTo(scaled, 0);
+      this.ctx.lineTo(scaled, this.dimentions.height);
+    }
     this.ctx.stroke();
+    
+
+    
   }
 
   this.drawCursor = (cursor) => {
@@ -56,6 +59,7 @@ function Canvas(ref, context, size, dimentions){
   }
 
   this.drawModel = (model, coord, color) => {
+    console.log(model)
     let entries = Object.entries(model)
     let adjustedCoord = {x:coord.x+1, y:coord.y+1}
 
@@ -78,14 +82,14 @@ function Canvas(ref, context, size, dimentions){
   this.checkModelBound = (difference, model, bounds) => {
     let patternArea = model["area"];
 
-    if(patternArea.x+difference.x > bounds || patternArea.y+difference.y > bounds){
+    if(patternArea.x+difference.x > bounds.x || patternArea.y+difference.y > bounds.y){
         return false;
     }
     return true;
 }
 
   this.clear = () => {
-    this.ctx.clearRect(0,0,this.dimentions, this.dimentions);
+    this.ctx.clearRect(0,0,this.dimentions.width, this.dimentions.height);
   }
 }
 

@@ -1,5 +1,5 @@
 function Alive(){
-    this.bounds = 0;
+    this.bounds = {x:0, y:0};
 
     this.generation = new Map();
 
@@ -23,22 +23,31 @@ function Alive(){
             this.kill(toDie);
             return true;
         }else{
-            alert("Stable")
             return false;
         }
     };
+
+    this.randomizeBoard = () => {
+        for(let i=0; i<this.bounds.x; i++){
+            for(let j=0; j<this.bounds.x; j++){
+                if(Math.floor(Math.random() * Math.floor(2))){
+                    this.generation.set(i + '-' + j, {x:i, y:j})
+                }
+            }
+        }
+    }
 
     this.boundAdjusted = (coordinates) => {
         let newcoordinates = coordinates
 
         if(coordinates.x < 0)
-            newcoordinates.x = this.bounds
-        else if(coordinates.x > this.bounds)
+            newcoordinates.x = this.bounds.x
+        else if(coordinates.x > this.bounds.x)
             newcoordinates.x = 0
 
         if(coordinates.y < 0)
-            newcoordinates.y = this.bounds
-        else if(coordinates.y > this.bounds)
+            newcoordinates.y = this.bounds.y
+        else if(coordinates.y > this.bounds.y)
             newcoordinates.y = 0
 
         return newcoordinates
