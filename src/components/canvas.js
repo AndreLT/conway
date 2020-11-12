@@ -31,17 +31,21 @@ function Canvas(ref, context, size, dimentions){
   }
 
   this.drawGrid = () => {
-    const limit = Math.floor(this.dimentions.width/this.size);
+    const limitX = Math.floor(this.dimentions.width/this.size);
+    const limitY = Math.floor(this.dimentions.height/this.size);
 
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     this.ctx.strokeStyle = "lightgray"
-    for(let i=0; i<=limit;i++){
+    for(let i=0; i<=limitX;i++){
       let scaled = i*this.size;
-      this.ctx.moveTo(0, scaled);
-      this.ctx.lineTo(this.dimentions.width, scaled);
       this.ctx.moveTo(scaled, 0);
       this.ctx.lineTo(scaled, this.dimentions.height);
+    }
+    for(let j=0; j<=limitY;j++){
+      let scaled = j*this.size;
+      this.ctx.moveTo(0, scaled);
+      this.ctx.lineTo(this.dimentions.width, scaled);
     }
     this.ctx.stroke();
   }
@@ -50,6 +54,16 @@ function Canvas(ref, context, size, dimentions){
     this.clear();
     this.ctx.beginPath();
     this.ctx.rect(cursor.x*this.size, cursor.y*this.size, this.size, this.size);
+    this.ctx.strokeStyle = "red";
+    this.ctx.stroke();
+  }
+
+  this.drawMouse = (clientX, clientY) => {
+    let scaledX = Math.floor(clientX/this.size)
+    let scaledY = Math.floor(clientY/this.size)
+    this.clear();
+    this.ctx.beginPath();
+    this.ctx.rect(scaledX*this.size, scaledY*this.size, this.size, this.size);
     this.ctx.strokeStyle = "red";
     this.ctx.stroke();
   }

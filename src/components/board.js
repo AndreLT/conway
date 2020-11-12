@@ -191,9 +191,39 @@ class Board extends React.Component {
         
     }
 
+    handleMouseMove = (clientX, clientY) => {
+        let scaledX = Math.floor(clientX/this.state.size)
+        let scaledY = Math.floor(clientY/this.state.size)
+
+        let coordinates = {x: scaledX, y: scaledY}
+        this.cursorCanvas.drawCursor(coordinates);
+
+        if(this.state.pattern)
+            this.placeModel(coordinates, this.state.pattern, this.alive.bounds);
+        
+        if(this.state.capturing)
+            this.cursorCanvas.drawCaptureArea(this.state.capturing, coordinates)
+        
+        Object.assign(this.data, {cursorcoord: coordinates});
+        this.dispatch();
+    }
+
+    handleClick = () => {
+        if(this.state.pattern){
+            if(this.cursorCanvas.checkModelBound(this.state.cursorcoord, this.state.pattern, this.alive.bounds)){
+                this.alive.conceiveModel(this.state.pattern, this.state.cursorcoord);
+                this.cursorCanvas.clear();
+                Object.assign(this.data, {pattern: null});
+            }
+        } else {
+            let coord = this.state.cursorcoord;
+            this.alive.generation.set(coord.x + '-' + coord.y,{x:coord.x, y:coord.y}) 
+        }
+        this.canvas.draw(this.alive.generation);
+    }
+
     clear = () => {
         this.alive.killAll();
-        this.stop();
         this.step();
     }
 
@@ -215,8 +245,8 @@ class Board extends React.Component {
     }
 
     componentDidMount(){
-        let canvasWidth = window.innerWidth-100;
-        let canvasHeight = window.innerHeight-100;
+        let canvasWidth = document.documentElement.clientWidth;
+        let canvasHeight = document.documentElement.clientHeight;
         this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
         this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
         this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
@@ -224,26 +254,21 @@ class Board extends React.Component {
         let width = Math.floor(canvasWidth/this.state.size);
         let height = Math.floor(canvasHeight/this.state.size);
         this.alive.bounds = {x: width, y: height};
-        
 
-        window.addEventListener('resize', this.initCanvas());
+        this.initCanvas();
     }
 
-    componentWillUnmount(){
-        window.removeEventListener('resize', this.initCanvas());
-    }
-    
     render() {
 
         return <div class="bg-gray-200 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
             <div class="flex flex-row w-full h-full m-auto relative">
-            <button class="absolute px-4 py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals color={"#aaa"}/></button>
-                <div class="flex relative m-auto">
-                    <canvas id="board" class={"p-2 bg-transparent m-auto absolute"} ref={this.boardRef} />
-                    <canvas id="cursor" class={"p-2 bg-transparent m-auto absolute"} ref={this.cursorRef} />
-                    <canvas id="grid" class={"p-2 bg-transparent"} ref={this.gridRef} />
+                <div class="flex z-index-4 relative m-auto">
+                    <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
+                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onClick={() => this.handleClick()} />
+                    <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
+                <button class="absolute transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals size="20px" color={"#aaa"}/></button>
                 </div>
-                <div class={`flex flex-col w-2/6 h-full bg-gray-100 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                <div class={`flex flex-col lg:w-2/6 sm:w-3/6 h-full bg-gray-100 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                         <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 font-semibold font-mono shadow-screen">
                             <div class="flex justify-between">
                                 <text class={!this.state.intervalid && "opacity-20 text-size-10"}>Auto</text>
@@ -271,9 +296,9 @@ class Board extends React.Component {
                                 <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-neusm' : 'shadow-screen'}`} onClick={()=> this.stop()}><FaPause size={20} /></button>
                             </div>
                             <div class="flex justify-between p-4">
-                                <button class="my-auto" onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 750}><FaBackward /></button>
+                                <button class="my-auto" onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 600}><FaBackward /></button>
                                 <div class="h-10 px-2 rounded-full shadow-neuinner w-4/5 bg-gray-200">
-                                    <div class={`transition duration-200 ease-in-out h-6 w-${(750-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
+                                    <div class={`h-6 w-${(650-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
                                 </div>
                                 <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
                             </div>
