@@ -1,8 +1,9 @@
 import React from 'react';
-import {FaPlay, FaStepForward, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6} from 'react-icons/fa'
+import {FaPlay, FaStepForward, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6} from 'react-icons/fa';
+import {BsGrid3X3} from 'react-icons/bs';
 
-import Canvas from './canvas'
-import Alive from './alive'
+import Canvas from './canvas';
+import Alive from './alive';
 
 
 class Board extends React.Component {
@@ -18,6 +19,7 @@ class Board extends React.Component {
         this.cursorRef = React.createRef();
         this.gun = require('../models/glider_gun.json');
         this.glider = require('../models/glider.json');
+        this.megaglider = require('../models/mega_glider.json');
         this.data = {};
 
         this.state = {
@@ -31,6 +33,7 @@ class Board extends React.Component {
             res: null,
             capturing: null,
             menuOut: true,
+            showGrid: true,
        };
     }
 
@@ -56,19 +59,6 @@ class Board extends React.Component {
                 this.cursorCanvas.drawCaptureArea(this.state.capturing, boundAdjusted)
             
             Object.assign(this.data, {cursorcoord: boundAdjusted});
-        }
-
-        const rotatePattern = () => {
-            let entries = Object.entries(this.state.pattern);
-            let area = this.state.pattern["area"];
-            let rotated = {};
-            console.log(this.state.pattern)
-            for (let i=0;i<=entries.length-2;i++) {
-                rotated[i] = {x:area.y-entries[i][1].y-1,y:entries[i][1].x}
-            }
-
-            rotated.area = {x:area.y, y:area.x}
-            this.handleModel(rotated)
         }
 
         switch(key){
@@ -111,7 +101,12 @@ class Board extends React.Component {
                 this.cursorCanvas.drawCursor(this.state.cursorcoord);
                 break;
             case 'r':
-                rotatePattern();
+                if(this.state.pattern){}
+                    this.handleModel(this.canvas.rotateModel(this.state.pattern))
+                break;
+            case 'q':
+                if(this.state.pattern)
+                    this.handleModel(this.canvas.inverseModel(this.state.pattern))
                 break;
         }
         this.dispatch();
@@ -174,6 +169,17 @@ class Board extends React.Component {
         this.cursorCanvas.drawModel(model, coordinates, isLegal ? "blue" : "red");
     }
 
+    toggleGrid = () => {
+        if(this.state.size >= 10){
+            if(this.state.showGrid)
+                this.gridCanvas.clear();
+            else    
+                this.gridCanvas.drawGrid();
+
+            this.setState({showGrid: !this.state.showGrid})
+        }
+    }
+
     speedDisplay = () => {
         return <>
             <FaPlay size={8} />
@@ -183,6 +189,12 @@ class Board extends React.Component {
             <FaPlay class={this.state.fps > 50 && 'opacity-20'} size={8} />
         </>
         
+    }
+
+    clear = () => {
+        this.alive.killAll();
+        this.stop();
+        this.step();
     }
 
     initCanvas(){
@@ -223,7 +235,7 @@ class Board extends React.Component {
     
     render() {
 
-        return <div class="bg-gray-100 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
+        return <div class="bg-gray-200 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
             <div class="flex flex-row w-full h-full m-auto relative">
             <button class="absolute px-4 py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals color={"#aaa"}/></button>
                 <div class="flex relative m-auto">
@@ -265,10 +277,15 @@ class Board extends React.Component {
                                 </div>
                                 <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
                             </div>
-                            <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
+                            <div class="flex justify-between p-4">
+                                <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
+                                <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
+                                <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
+                            </div>
                             <div class="w-11/12 h-56 mx-auto mt-5 bg-gray-200 rounded-md shadow-neuinner">
                                 <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 mx-2 shadow-neusm focus:shadow-screen`}>Glider Gun</button>
                                 <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Mega Glider</button>
                             </div>
                         </div>
                 </div>

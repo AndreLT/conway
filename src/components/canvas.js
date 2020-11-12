@@ -31,13 +31,12 @@ function Canvas(ref, context, size, dimentions){
   }
 
   this.drawGrid = () => {
-    const limitX = Math.floor(this.dimentions.width/this.size);
-    const limitY = Math.floor(this.dimentions.height/this.size);
+    const limit = Math.floor(this.dimentions.width/this.size);
 
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     this.ctx.strokeStyle = "lightgray"
-    for(let i=0; i<=limitX;i++){
+    for(let i=0; i<=limit;i++){
       let scaled = i*this.size;
       this.ctx.moveTo(0, scaled);
       this.ctx.lineTo(this.dimentions.width, scaled);
@@ -45,9 +44,6 @@ function Canvas(ref, context, size, dimentions){
       this.ctx.lineTo(scaled, this.dimentions.height);
     }
     this.ctx.stroke();
-    
-
-    
   }
 
   this.drawCursor = (cursor) => {
@@ -59,9 +55,10 @@ function Canvas(ref, context, size, dimentions){
   }
 
   this.drawModel = (model, coord, color) => {
-    console.log(model)
     let entries = Object.entries(model)
     let adjustedCoord = {x:coord.x+1, y:coord.y+1}
+
+    this.clear();
 
     this.ctx.beginPath();
     this.ctx.globalAlpha = 0.4;
@@ -78,6 +75,35 @@ function Canvas(ref, context, size, dimentions){
 
     this.ctx.globalAlpha = 1.0;
   }
+
+  this.inverseModel = (model) => {
+    let inverted = {};
+    let size = Object.keys(model).length-1;
+    let width = model["area"].x-1;
+
+
+    for(let i=1; i<=size; i++){
+      let element = model[i];
+      inverted[i] = {x: width-element.x, y:element.y}
+    }
+    inverted["area"] = model["area"];
+
+    return inverted;
+  }
+
+  this.rotateModel = (model) => {
+    let area = model["area"]
+    let rotated = {};
+    let size = Object.keys(model).length-1;
+
+    for (let i=1;i<=size;i++) {
+        let element = model[i]
+        rotated[i] = {x:area.y-element.y-1,y:element.x}
+    }
+
+    rotated.area = {x:area.y, y:area.x}
+    return rotated
+}
 
   this.checkModelBound = (difference, model, bounds) => {
     let patternArea = model["area"];

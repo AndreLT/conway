@@ -6,17 +6,33 @@ function Alive(){
     this.scan = () => {
         let toLive = [];
         let toDie = [];
+        let adjacent = new Map();
 
         for (let [key, value] of this.generation) {
-            let adjustedToBounds = this.boundAdjusted(value)
-            let neighbours = this.neighbours(adjustedToBounds, true);
+            for(let i=value.x-1; i<=value.x+1; i++){
+                for(let j=value.y-1; j<=value.y+1; j++){
+                    let adjusted = this.boundAdjusted({x:i, y:j})
+                    let element = adjusted.x + '-' + adjusted.y;
+                    let current = adjacent.get(element)
 
-            if(neighbours[0] > 3 || neighbours[0] < 2)
-                toDie.push(key);
-                
-            if(neighbours[1])
-                toLive = toLive.concat(neighbours[1]);
+                    if(current?.neighbours)
+                        adjacent.set(element, {neighbours: current.neighbours+1, coordinates: current.coordinates});
+                    else 
+                        adjacent.set(element, {neighbours: 1, coordinates: {x:adjusted.x, y:adjusted.y}});
+                }
+            }
+            let own = adjacent.get(key);
+            adjacent.set(key,{neighbours: own.neighbours-1, coordinates: own.coordinates})
         };
+
+        for (let [key, value] of adjacent){
+            if(value.neighbours < 2 || value.neighbours > 3){
+                toDie.push(key)
+            }else if(value.neighbours === 3){
+                toLive.push(value.coordinates)
+            }
+        }
+        
 
         if(toDie.length || toLive.length){
             this.conceive(toLive);
@@ -29,7 +45,7 @@ function Alive(){
 
     this.randomizeBoard = () => {
         for(let i=0; i<this.bounds.x; i++){
-            for(let j=0; j<this.bounds.x; j++){
+            for(let j=0; j<this.bounds.y; j++){
                 if(Math.floor(Math.random() * Math.floor(2))){
                     this.generation.set(i + '-' + j, {x:i, y:j})
                 }
@@ -101,6 +117,10 @@ function Alive(){
 
     this.size = () => {
         return this.generation.size;
+    }
+
+    this.killAll = () => {
+        this.generation.clear();
     }
 }
 
