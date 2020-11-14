@@ -34,6 +34,7 @@ class Board extends React.Component {
             capturing: null,
             menuOut: true,
             showGrid: true,
+            mouseDown: false,
        };
     }
 
@@ -204,6 +205,9 @@ class Board extends React.Component {
         if(this.state.capturing)
             this.cursorCanvas.drawCaptureArea(this.state.capturing, coordinates)
         
+        if(this.state.mouseDown)
+            this.handleClick();
+        
         Object.assign(this.data, {cursorcoord: coordinates});
         this.dispatch();
     }
@@ -261,14 +265,14 @@ class Board extends React.Component {
     render() {
 
         return <div class="bg-gray-200 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
-            <div class="flex flex-row w-full h-full m-auto relative">
-                <div class="flex z-index-4 relative m-auto">
+            <div class="flex flex-row w-full h-full m-auto">
+                <div class="flex z-index-4 m-auto">
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
-                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onClick={() => this.handleClick()} />
+                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onMouseDown={() => this.setState({mouseDown: true})} onMouseUp={() => this.setState({mouseDown: false})} onClick={() => this.handleClick()}/>
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
-                <button class="absolute transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals size="20px" color={"#aaa"}/></button>
                 </div>
-                <div class={`flex flex-col lg:w-2/6 sm:w-3/6 h-full bg-gray-100 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                <button class="absolute transition right-0 duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals size="20px" color={"#aaa"}/></button>
+                <div class={`flex flex-col lg:w-2/6 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                         <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 font-semibold font-mono shadow-screen">
                             <div class="flex justify-between">
                                 <text class={!this.state.intervalid && "opacity-20 text-size-10"}>Auto</text>
@@ -291,26 +295,33 @@ class Board extends React.Component {
                         </div>
                         <div class="flex flex-col">
                             <div class="flex justify-between">
-                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-neusm focus:shadow-screen`} onClick={()=> this.step()}><FaStepForward size={20} /></button>
-                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-screen' : 'shadow-neusm'}`} onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
-                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 ${this.state.intervalid ? 'shadow-neusm' : 'shadow-screen'}`} onClick={()=> this.stop()}><FaPause size={20} /></button>
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} onClick={()=> this.step()}><FaStepForward size={20} /></button>
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} onClick={()=> this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
+                                <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`} onClick={()=> this.stop()}><FaPause size={20} /></button>
                             </div>
                             <div class="flex justify-between p-4">
                                 <button class="my-auto" onClick={()=> this.speed(this.state.fps+50)} disabled={this.state.fps >= 600}><FaBackward /></button>
                                 <div class="h-10 px-2 rounded-full shadow-neuinner w-4/5 bg-gray-200">
-                                    <div class={`h-6 w-${(650-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
+                                    <div class={`transition-width h-6 w-${(650-this.state.fps)/50}/12 mt-2 bg-gray-100 rounded-full`}></div>
                                 </div>
                                 <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
                             </div>
                             <div class="flex justify-between p-4">
-                                <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
+                                <div class="px-4 m-auto py-2 z-index-5 bg-opacity-0 rounded-md m-2 shadow-neusm focus:outline-none"><FaDiceD6 /></div>
+                                <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
                                 <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
                                 <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                             </div>
-                            <div class="w-11/12 h-56 mx-auto mt-5 bg-gray-200 rounded-md shadow-neuinner">
-                                <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 mx-2 shadow-neusm focus:shadow-screen`}>Glider Gun</button>
-                                <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Glider</button>
-                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out border-4 border-gray-100 bg-gray-100 rounded-md px-5 py-2 mt-2 shadow-neusm focus:shadow-screen`}>Mega Glider</button>
+                            <div class="w-11/12 mx-auto h-56 shadow-neuinner py-2 rounded-md grid grid-rows-3 grid-flow-col gap-x-1 gap-y-5">
+                                <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
+                                <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
+                                <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
                             </div>
                         </div>
                 </div>
