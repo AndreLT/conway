@@ -43,6 +43,17 @@ function Alive(){
         }
     };
 
+    this.removeOverBounds = () => {
+        let overBounds = [];
+
+        for (let [key, value] of this.generation) {
+            if(value.x > this.bounds.x || value.y > this.bounds.y)
+                overBounds.push(key)
+        }
+
+        this.kill(overBounds);
+    }
+
     this.randomizeBoard = () => {
         for(let i=0; i<this.bounds.x; i++){
             for(let j=0; j<this.bounds.y; j++){

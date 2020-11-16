@@ -248,9 +248,10 @@ class Board extends React.Component {
         this.canvas.draw(this.alive.generation);
     }
 
-    componentDidMount(){
+    canvasSetup(){
         let canvasWidth = document.documentElement.clientWidth;
         let canvasHeight = document.documentElement.clientHeight;
+
         this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
         this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
         this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, {width: canvasWidth, height: canvasHeight});
@@ -259,12 +260,24 @@ class Board extends React.Component {
         let height = Math.floor(canvasHeight/this.state.size);
         this.alive.bounds = {x: width, y: height};
 
+        if(this.alive.generation.size)
+            this.alive.removeOverBounds()
+
         this.initCanvas();
+    }
+
+    componentDidMount(){
+        this.canvasSetup();
+        window.addEventListener('resize', ()=>this.canvasSetup());
+    }
+
+    componentWillUnmount(){
+        window.removeEventListener('resize', ()=>this.canvasSetup());
     }
 
     render() {
 
-        return <div class="bg-gray-200 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)}>
+        return <div class="bg-gray-200 overflow-hidden relative flex h-screen w-full" onKeyDown={(e)=> this.handleKeyPress(e.key)} onresize={()=>console.log('risezed')}>
             <div class="flex flex-row w-full h-full m-auto">
                 <div class="flex z-index-4 m-auto">
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
