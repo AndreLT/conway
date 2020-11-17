@@ -4,6 +4,7 @@ import {BsGrid3X3} from 'react-icons/bs';
 
 import Canvas from './canvas';
 import Alive from './alive';
+import Display from './display';
 
 
 class Board extends React.Component {
@@ -156,6 +157,7 @@ class Board extends React.Component {
             this.stop();
         }
         this.canvas.draw(this.alive.generation);
+        Object.assign(this.data, {generation: this.state.generation+1});
         this.dispatch();
     }
     
@@ -181,16 +183,7 @@ class Board extends React.Component {
         }
     }
 
-    speedDisplay = () => {
-        return <>
-            <FaPlay size={8} />
-            <FaPlay class={this.state.fps > 600 && 'opacity-20'} size={8} />
-            <FaPlay class={this.state.fps > 400 && 'opacity-20'} size={8} />
-            <FaPlay class={this.state.fps > 200 && 'opacity-20'} size={8} />
-            <FaPlay class={this.state.fps > 50 && 'opacity-20'} size={8} />
-        </>
-        
-    }
+    
 
     handleMouseMove = (clientX, clientY) => {
         let scaledX = Math.floor(clientX/this.state.size)
@@ -266,9 +259,18 @@ class Board extends React.Component {
         this.initCanvas();
     }
 
+    handleTouch(model){
+        Object.assign(this.data,{menuOut: true})
+        this.handleModel(model)
+    }
+
     componentDidMount(){
         this.canvasSetup();
         window.addEventListener('resize', ()=>this.canvasSetup());
+        window.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }, {passive: false});
     }
 
     componentWillUnmount(){
@@ -281,31 +283,18 @@ class Board extends React.Component {
             <div class="flex flex-row w-full h-full m-auto">
                 <div class="flex z-index-4 m-auto">
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
-                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onMouseDown={() => this.setState({mouseDown: true})} onMouseUp={() => this.setState({mouseDown: false})} onClick={() => this.handleClick()}/>
+                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onTouchStart={() => this.setState({mouseDown: true})} onTouchEnd={() => this.setState({mouseDown: false})} onTouchMove={e=> this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onMouseDown={() => this.setState({mouseDown: true})} onMouseUp={() => this.setState({mouseDown: false})} onClick={() => this.handleClick()}/>
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
                 </div>
-                <button class="absolute transition right-0 duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals size="20px" color={"#aaa"}/></button>
-                <div class={`flex flex-col lg:w-2/6 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-hidden px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
-                        <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 font-semibold font-mono shadow-screen">
-                            <div class="flex justify-between">
-                                <text class={!this.state.intervalid && "opacity-20 text-size-10"}>Auto</text>
-                                <text class={this.state.intervalid && "opacity-20"}>Paused</text>
-                            </div>
-                            <div class="flex justify-between my-2 proportional-nums">
-                                <text>Generation</text>
-                                <text>{this.state.generation}</text>
-                            </div>
-                            <div class="flex justify-between my-2 proportional-nums">
-                                <div>
-                                    <text>Speed</text>
-                                    <div class="flex">{this.speedDisplay()}</div>
-                                </div>
-                                <div class="flex flex-col">
-                                    <text>{(1000/this.state.fps).toFixed(2)} Gen./s</text>
-                                    <text class="text-sm">{`x: ${this.state.cursorcoord.x}, y: ${this.state.cursorcoord.y}`}</text>
-                                </div>
-                            </div>
-                        </div>
+                <button class="absolute transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white" onClick={()=> this.setState({menuOut: !this.state.menuOut})}><FaEquals size="20px" color={"#aaa"}/></button>
+                <div class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                        <Display 
+                            intervalid={this.state.intervalid} 
+                            alive={this.alive.generation.size} 
+                            generation={this.state.generation}
+                            speed={this.state.fps}
+                            cursor={this.state.cursorcoord}
+                        />
                         <div class="flex flex-col">
                             <div class="flex justify-between">
                                 <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} onClick={()=> this.step()}><FaStepForward size={20} /></button>
@@ -320,13 +309,12 @@ class Board extends React.Component {
                                 <button class="my-auto" onClick={()=> this.speed(this.state.fps-50)} disabled={this.state.fps <= 50}><FaForward /></button>
                             </div>
                             <div class="flex justify-between p-4">
-                                <div class="px-4 m-auto py-2 z-index-5 bg-opacity-0 rounded-md m-2 shadow-neusm focus:outline-none"><FaDiceD6 /></div>
                                 <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
                                 <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
                                 <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                             </div>
                             <div class="w-11/12 mx-auto h-56 shadow-neuinner py-2 rounded-md grid grid-rows-3 grid-flow-col gap-x-1 gap-y-5">
-                                <button onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
+                                <button onTouchMove={e=>this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)}onTouchStart={(e)=> this.handleTouch(this.gun)} onClick={()=> this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
                                 <button onClick={()=> this.handleModel(this.glider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider</button>
                                 <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
                                 <button onClick={()=> this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
