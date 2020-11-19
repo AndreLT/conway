@@ -134,6 +134,7 @@ module.exports = {
         900: '#702459',
       },
       retro: '#d9e1af',
+      tutorial: 'rgba(0, 0, 255, 0.2)'
     },
     spacing: {
       px: '1px',
@@ -707,7 +708,7 @@ module.exports = {
     animation: {
       none: 'none',
       spin: 'spin 1s linear infinite',
-      ping: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
+      ping: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
       pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       bounce: 'bounce 1s infinite',
     },
@@ -723,7 +724,7 @@ module.exports = {
       },
       bounce: {
         '0%, 100%': {
-          transform: 'translateY(-25%)',
+          transform: 'translateX(-50%)',
           animationTimingFunction: 'cubic-bezier(0.8,0,1,1)',
         },
         '50%': {
