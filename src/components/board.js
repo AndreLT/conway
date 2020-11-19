@@ -1,6 +1,9 @@
 import React from 'react';
 import { FaPlay, FaStepForward, FaArrowLeft, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
+import {AiOutlineCloseSquare} from 'react-icons/ai';
+import {FiCopy} from 'react-icons/fi';
+import {GiSaveArrow} from 'react-icons/gi';
 import { MdSelectAll } from 'react-icons/md';
 
 import Canvas from './canvas';
@@ -25,6 +28,7 @@ class Board extends React.Component {
         this.megaglider = require('../models/mega_glider.json');
         this.pulsar3 = require('../models/3_pulsar.json');
         this.rpentomino = require('../models/r_pentomino.json');
+        this.ap11 = require('../models/achims_p11.json')
         this.data = {};
 
         this.state = {
@@ -41,6 +45,8 @@ class Board extends React.Component {
             showGrid: true,
             mouseDown: false,
             tutorial: 0,
+            paused: false,
+            selected: null
         };
     }
 
@@ -140,23 +146,6 @@ class Board extends React.Component {
         this.setState({ fps: news })
     }
 
-    capture = (end) => {
-        const start = this.state.capturing;
-        const blueprint = {};
-        let counter = 1;
-
-        for (let i = start.x; i <= end.x; i++) {
-            for (let j = start.y; j <= end.y; j++) {
-                if (this.alive.generation.has(i + '-' + j)) {
-                    blueprint[counter] = { x: i - start.x, y: j - start.y };
-                    counter++
-                }
-            }
-        }
-        blueprint['size'] = counter - 1;
-        return (blueprint);
-    }
-
     step = () => {
         if (!this.alive.scan()) {
             this.stop();
@@ -188,8 +177,6 @@ class Board extends React.Component {
         }
     }
 
-
-
     handleMouseMove = (clientX, clientY) => {
         let scaledX = Math.floor(clientX / this.state.size)
         let scaledY = Math.floor(clientY / this.state.size)
@@ -197,13 +184,17 @@ class Board extends React.Component {
         let coordinates = { x: scaledX, y: scaledY }
         this.cursorCanvas.drawCursor(coordinates);
 
+        if(this.state.selected){
+            this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
+        }
+
         if (this.state.pattern)
             this.placeModel(coordinates, this.state.pattern, this.alive.bounds);
 
         else if (this.state.mouseDown) {
 
             if (this.state.capturingCoordinates)
-                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates, coordinates)
+                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue")
             else
                 this.handleClick();
         }
@@ -227,6 +218,7 @@ class Board extends React.Component {
     }
 
     clear = () => {
+        this.stop();
         this.alive.killAll();
         this.step();
     }
@@ -267,33 +259,53 @@ class Board extends React.Component {
     }
 
     handleMouseUp() {
-        const capture = (end) => {
-            const start = this.state.capturingCoordinates;
+        let newState = {};
+        const capture = () => {
+            const start = this.state.capturingCoordinates.start;
+            const end = this.state.cursorcoord;
+            const area = {x:0, y:0}
             const blueprint = {};
             let counter = 1;
 
             for (let i = start.x; i <= end.x; i++) {
                 for (let j = start.y; j <= end.y; j++) {
                     if (this.alive.generation.has(i + '-' + j)) {
-                        blueprint[counter] = { x: i - start.x, y: j - start.y };
+                        let relativeX = i - start.x;
+                        let relativeY = j - start.y;
+
+                        blueprint[counter] = { x: relativeX, y: relativeY };
                         counter++
+                        if(relativeX > area.x)
+                            area.x = relativeX
+                        if(relativeY > area.y)
+                            area.y = relativeY
                     }
                 }
             }
-            blueprint['size'] = counter - 1;
+            blueprint['area'] = {x:area.x+1, y:area.y+1};
             return (blueprint);
         }
 
         if (this.state.capturing) {
-            let captured = capture(this.state.cursorcoord)
-            console.log(captured)
+            let captured = capture();
+            Object.assign(newState, {selected: captured, capturing: false, capturingCoordinates: {start: this.state.capturingCoordinates.start, end: this.state.cursorcoord}})
         }
-        this.setState({ mouseDown: false, capturing: false, capturingCoordinates: null })
+
+        if(this.state.paused){
+            this.runtime(this.state.fps)
+            Object.assign(newState, {paused: false})
+        }
+
+        this.setState({mouseDown: false, ...newState})
     }
 
     handleMouseDown() {
+        if(this.state.intervalid){
+            this.setState({paused: true})
+            this.stop();
+        }
         if (this.state.capturing)
-            this.setState({ capturingCoordinates: this.state.cursorcoord })
+            this.setState({ capturingCoordinates: {start: this.state.cursorcoord, end: null} })
 
         this.setState({ mouseDown: true })
     }
@@ -301,6 +313,14 @@ class Board extends React.Component {
     handleTouch(model) {
         Object.assign(this.data, { menuOut: true })
         this.handleModel(model)
+    }
+
+    cancelSelection(){
+        this.setState({
+            selected: null,
+            capturingCoordinates: null
+        })
+        this.cursorCanvas.clear();
     }
 
     componentDidMount() {
@@ -321,9 +341,44 @@ class Board extends React.Component {
         return <div class="bg-gray-200 overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)} onresize={() => console.log('risezed')}>
             <div class="flex flex-row w-full h-full m-auto">
                 <div class="flex z-index-4 m-auto" tabIndex="-1">
+
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
-                    <canvas id="cursor" class={"bg-transparent m-auto absolute"} ref={this.cursorRef} onTouchStart={() => this.setState({ mouseDown: true })} onTouchEnd={() => this.setState({ mouseDown: false })} onTouchMove={e => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)} onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} onMouseDown={() => this.handleMouseDown()} onMouseUp={() => this.handleMouseUp()} onClick={() => this.handleClick()} />
+
+                    <canvas 
+                        id="cursor"
+                        class={"bg-transparent m-auto absolute"} 
+                        ref={this.cursorRef} 
+                        onTouchStart={() => this.setState({ mouseDown: true })} 
+                        onTouchEnd={() => this.setState({ mouseDown: false })} 
+                        onTouchMove={e => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)} 
+                        onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} 
+                        onMouseDown={() => this.handleMouseDown()} 
+                        onMouseUp={() => this.handleMouseUp()} 
+                        onClick={() => this.handleClick()} 
+                    />
+
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
+
+                    {this.state.selected && 
+                        <div style={{
+                            display: "flex",
+                            position: "absolute", 
+                            justifyContent: "space-between",
+                            left: this.state.capturingCoordinates.start.x*this.state.size, 
+                            top: (this.state.capturingCoordinates.start.y-3)*this.state.size, 
+                            background: "gray", 
+                            width: "100px", 
+                            height: "30px",
+                            borderRadius: "10px",
+                            backgroundColor: "rgba(120,120,120,.35)",
+                            padding: "5px"
+                        }}>
+                            <button class="rounded-md p-1" onClick={()=>{this.setState({pattern: this.state.selected}); this.cancelSelection()}}><FiCopy color="green"/></button>
+                            <button class="rounded-md p-1" onClick={()=>console.log(this.state.selected)}><GiSaveArrow color="blue"/></button>
+                            <button class="rounded-md p-1" onClick={()=>this.cancelSelection()}><AiOutlineCloseSquare color="red"/></button>
+                        </div>
+                    }
+
                 </div>
 
                 <div class="absolute flex">
@@ -364,7 +419,15 @@ class Board extends React.Component {
                             <button class="my-auto" onClick={() => this.speed(this.state.fps - 50)} disabled={this.state.fps <= 50}><FaForward /></button>
                         </div>
                         <div class="flex justify-between p-4">
-                            <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.setState({ capturing: true })}><MdSelectAll /></button>
+                            <button 
+                                class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" 
+                                onClick={() => {
+                                    this.stop();
+                                    this.setState({ capturing: true })
+                                }}
+                            >
+                                <MdSelectAll />
+                            </button>
                             <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
@@ -381,6 +444,7 @@ class Board extends React.Component {
                             <button onClick={() => this.handleModel(this.glider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider</button>
                             <button onClick={() => this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
                             <button onClick={() => this.handleModel(this.pulsar3)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>3-pulsar</button>
+                            <button onClick={() => this.handleModel(this.ap11)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Achim's p11</button>
                         </div>
                     </div>
                 </div>
@@ -390,7 +454,7 @@ class Board extends React.Component {
                     <span class="font-bold text-center text-gray-700 mx-auto text-4xl w-1/2">Welcome to Conway's Game of Life</span>
                     <div class="flex flex-row w-3/12 mx-auto justify-between">
                         <button onClick={()=>this.setState({tutorial: 1})} class="transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none">How to Play</button>
-                        <button class="transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none">Skip Tutorial</button>
+                        <button onClick={()=>this.setState({tutorial: -1})} class="transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none">Skip Tutorial</button>
                     </div>
                 </div>
             }

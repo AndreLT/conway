@@ -19,10 +19,10 @@ function Canvas(ref, context, size, dimentions){
     }
   }
 
-  this.drawCaptureArea = (capture, cursor) => {
+  this.drawCaptureArea = (capture, cursor, color) => {
     this.clear();
     this.ctx.beginPath();
-    this.ctx.fillStyle = "blue";
+    this.ctx.fillStyle = color;
     this.ctx.globalAlpha = 0.3;
     this.ctx.rect(capture.x*this.size, capture.y*this.size, (cursor.x - capture.x)*this.size,(cursor.y - capture.y + 1)*this.size);
     this.ctx.fill();
