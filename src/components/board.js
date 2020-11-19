@@ -130,6 +130,12 @@ class Board extends React.Component {
         this.canvas.draw(this.alive.generation);
     }
 
+    randomizeArea = (bounds) => {
+        this.alive.randomizeArea(bounds);
+        this.canvas.draw(this.alive.generation);
+        this.cancelSelection();
+    }
+
     runtime = (speed) => {
         const id = window.setInterval(() => this.step(), speed);
         this.setState({ intervalid: id })
@@ -288,7 +294,9 @@ class Board extends React.Component {
 
         if (this.state.capturing) {
             let captured = capture();
-            Object.assign(newState, {selected: captured, capturing: false, capturingCoordinates: {start: this.state.capturingCoordinates.start, end: this.state.cursorcoord}})
+            let start = {x:Math.min(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y:Math.min(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y)};
+            let end = {x:Math.max(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y:Math.max(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y)};
+            Object.assign(newState, {selected: captured, capturing: false, capturingCoordinates: {start: start, end: end}})
         }
 
         if(this.state.paused){
@@ -315,6 +323,13 @@ class Board extends React.Component {
         this.handleModel(model)
     }
 
+    toolbarYPlacement(){
+        if(this.state.capturingCoordinates.start.y < 7)
+            return this.state.capturingCoordinates.end.y+1
+        else
+            return this.state.capturingCoordinates.start.y-5
+    }
+
     cancelSelection(){
         this.setState({
             selected: null,
@@ -338,7 +353,7 @@ class Board extends React.Component {
 
     render() {
 
-        return <div class="bg-gray-200 overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)} onresize={() => console.log('risezed')}>
+        return <div class="bg-gray-200 overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
             <div class="flex flex-row w-full h-full m-auto">
                 <div class="flex z-index-4 m-auto" tabIndex="-1">
 
@@ -348,8 +363,8 @@ class Board extends React.Component {
                         id="cursor"
                         class={"bg-transparent m-auto absolute"} 
                         ref={this.cursorRef} 
-                        onTouchStart={() => this.setState({ mouseDown: true })} 
-                        onTouchEnd={() => this.setState({ mouseDown: false })} 
+                        onTouchStart={() => this.handleMouseDown()} 
+                        onTouchEnd={() => this.handleMouseUp()} 
                         onTouchMove={e => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)} 
                         onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)} 
                         onMouseDown={() => this.handleMouseDown()} 
@@ -365,17 +380,15 @@ class Board extends React.Component {
                             position: "absolute", 
                             justifyContent: "space-between",
                             left: this.state.capturingCoordinates.start.x*this.state.size, 
-                            top: (this.state.capturingCoordinates.start.y-3)*this.state.size, 
-                            background: "gray", 
-                            width: "100px", 
-                            height: "30px",
+                            top: this.toolbarYPlacement()*this.state.size, 
+                            width: "150px",
                             borderRadius: "10px",
-                            backgroundColor: "rgba(120,120,120,.35)",
                             padding: "5px"
                         }}>
-                            <button class="rounded-md p-1" onClick={()=>{this.setState({pattern: this.state.selected}); this.cancelSelection()}}><FiCopy color="green"/></button>
-                            <button class="rounded-md p-1" onClick={()=>console.log(this.state.selected)}><GiSaveArrow color="blue"/></button>
-                            <button class="rounded-md p-1" onClick={()=>this.cancelSelection()}><AiOutlineCloseSquare color="red"/></button>
+                            <button class="flex rounded-md p-2 bg-gray-100" onClick={()=>{this.setState({pattern: this.state.selected}); this.cancelSelection()}}><FiCopy color="green"/></button>
+                            <button class="flex rounded-md p-2 bg-gray-100" onClick={()=>console.log(this.state.selected)}><GiSaveArrow color="blue"/></button>
+                            <button class="flex rounded-md p-2 bg-gray-100" onClick={()=>{this.randomizeArea(this.state.capturingCoordinates)}}><FaDiceD6 color="turquoise"/></button>
+                            <button class="flex rounded-md p-2 bg-gray-100" onClick={()=>this.cancelSelection()}><AiOutlineCloseSquare color="red"/></button>
                         </div>
                     }
 
@@ -423,12 +436,12 @@ class Board extends React.Component {
                                 class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" 
                                 onClick={() => {
                                     this.stop();
-                                    this.setState({ capturing: true })
+                                    this.setState({ menuOut: true, capturing: true })
                                 }}
                             >
                                 <MdSelectAll />
                             </button>
-                            <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize()}><FaDiceD6 /></button>
+                            <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize(this.alive.bounds)}><FaDiceD6 /></button>
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
@@ -450,11 +463,25 @@ class Board extends React.Component {
                 </div>
             </div>
             {this.state.tutorial === 0 && 
-                <div class="absolute flex flex-col align-center w-full h-full">
-                    <span class="font-bold text-center text-gray-700 mx-auto text-4xl w-1/2">Welcome to Conway's Game of Life</span>
-                    <div class="flex flex-row w-3/12 mx-auto justify-between">
-                        <button onClick={()=>this.setState({tutorial: 1})} class="transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none">How to Play</button>
-                        <button onClick={()=>this.setState({tutorial: -1})} class="transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none">Skip Tutorial</button>
+                <div
+                style={{
+                    display: "flex",
+                    position: "absolute", 
+                    alignContent: "center",
+                    justifyContent: "center",
+                    width: "100%", 
+                    height: "100%",
+                    backgroundColor: "rgba(247,247,247,.8)"
+                }}>
+                    <div class="flex flex-col shadow-resting my-auto bg-gray-100 sm:w-10/12 md:w-4/6 lg:w-1/2 rounded-2xl p-8">
+                        <span class="font-bold text-center text-gray-800 mx-auto sm:text-lg md:text-2xl text-4xl">Welcome to Conway's Game of Life</span>
+                        <p class="flex flex-wrap mx-auto my-10 md:my-5 md:text-sm text-justify">
+                            The Game of Life, also known simply as Life, is a cellular automaton devised by the British mathematician John Horton Conway in 1970. It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. It is Turing complete and can simulate a universal constructor or any other Turing machine. 
+                        </p>
+                        <div class="flex flex-row mx-auto w-4/6 justify-between">
+                            <button onClick={()=>this.setState({tutorial: 1})} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
+                            <button onClick={()=>this.setState({tutorial: -1})} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
+                        </div>
                     </div>
                 </div>
             }

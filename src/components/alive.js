@@ -63,6 +63,15 @@ function Alive(){
             }
         }
     }
+    this.randomizeArea = (bounds) => {
+        for(let i=bounds.start.x; i<bounds.end.x; i++){
+            for(let j=bounds.start.y; j<bounds.end.y; j++){
+                if(Math.floor(Math.random() * Math.floor(2))){
+                    this.generation.set(i + '-' + j, {x:i, y:j})
+                }
+            }
+        }
+    }
 
     this.boundAdjusted = (coordinates) => {
         let newcoordinates = coordinates

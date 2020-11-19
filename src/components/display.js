@@ -15,25 +15,25 @@ const Display = (props) => {
 
     return <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen">
         <div class="flex justify-between">
-            <text class={!props.intervalid && "opacity-20"}>Auto</text>
-            <text class={props.intervalid && "opacity-20"}>Paused</text>
+            <span class={!props.intervalid && "opacity-20"}>Auto</span>
+            <span class={props.intervalid && "opacity-20"}>Paused</span>
         </div>
         <div class="flex justify-between my-2 proportional-nums">
-            <text>Alive</text>
-            <text>{props.alive}</text>
+            <span>Alive</span>
+            <span>{props.alive}</span>
         </div>
         <div class="flex justify-between my-2 proportional-nums">
-            <text>Generation</text>
-            <text>{props.generation}</text>
+            <span>Generation</span>
+            <span>{props.generation}</span>
         </div>
         <div class="flex justify-between my-2 proportional-nums">
             <div>
-                <text>Speed</text>
+                <span>Speed</span>
                 <div class="flex">{speedDisplay()}</div>
             </div>
             <div class="flex flex-col">
-                <text>{(1000/props.speed).toFixed(2)} Gen./s</text>
-                <text class="text-sm">{`x: ${props.cursor.x}, y: ${props.cursor.y}`}</text>
+                <span>{(1000/props.speed).toFixed(2)} Gen./s</span>
+                <span class="text-sm">{`x: ${props.cursor.x}, y: ${props.cursor.y}`}</span>
             </div>
         </div>
     </div>
