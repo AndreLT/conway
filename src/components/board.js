@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaPlay, FaStepForward, FaArrowLeft, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
+import { FaPlay, FaStepForward, FaArrowLeft, FaArrowRight, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
 import { AiOutlineCloseSquare } from 'react-icons/ai';
 import { FiCopy } from 'react-icons/fi';
@@ -44,10 +44,11 @@ class Board extends React.Component {
             menuOut: true,
             showGrid: true,
             mouseDown: false,
-            tutorial: 0,
+            tutorial: null,
             paused: false,
             selected: null,
             ismobile: null,
+            testoffset: null,
         };
     }
 
@@ -102,13 +103,7 @@ class Board extends React.Component {
                 this.canvas.draw(this.alive.generation);
                 break;
             case 'e':
-                if (this.state.capturing) {
-                    const creation = this.capture(this.state.cursorcoord)
-                    const name = prompt("How will your creation be called?")
-                    localStorage.setItem(name, JSON.stringify(creation))
-                } else {
-                    Object.assign(this.data, { capturing: this.state.cursorcoord });
-                }
+                console.log(this.state.testoffset)
                 break;
             case 'c':
                 Object.assign(this.data, { capturing: null, pattern: null });
@@ -340,6 +335,26 @@ class Board extends React.Component {
             return this.state.capturingCoordinates.start.y - 5
     }
 
+    renderTutorialArrow() {
+        let position = document.getElementById(this.state.tutorial).getBoundingClientRect();
+        const steps = {
+            "menu": 
+                <div style={{position: "absolute", display: "flex", alignItems: "center", left: position.left+100, top: position.top, zIndex: 10}}>
+                    <FaArrowLeft class="animate-bounce" size={35}/>
+                    <span class="ml-10 text-lg font-mono">Start by opening the menu</span>
+                </div>,
+            "rpentomino": 
+                <div style={{position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 10}}>
+                    <span class="mr-10 text-lg font-mono w-30">Now select the R-Pentonimo pattern from the menu</span>
+                    <FaArrowRight class="animate-bounce" size={35}/>
+                </div>,
+            "place":
+                <span class="absolute left-50 text-2xl font-mono">Place your pattern anywere on the board</span>   
+        }
+        
+        return steps[this.state.tutorial]
+    }
+
     cancelSelection() {
         this.setState({
             selected: null,
@@ -358,7 +373,7 @@ class Board extends React.Component {
 
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
             this.setState({ ismobile: navigator.userAgent })
-
+        
     }
 
     componentWillUnmount() {
@@ -368,7 +383,8 @@ class Board extends React.Component {
     render() {
 
         return <div class="bg-gray-200 overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
-            <div class="flex flex-row w-full h-full m-auto">
+            <div id="place" class="flex flex-row w-full h-full m-auto">
+                {this.state.tutorial && this.renderTutorialArrow()}
                 <div class="flex z-index-4 m-auto" tabIndex="-1">
 
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
@@ -387,7 +403,6 @@ class Board extends React.Component {
                     />
 
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
-
                     {this.state.selected &&
                         <div style={{
                             display: "flex",
@@ -430,21 +445,18 @@ class Board extends React.Component {
 
                 </div>
 
-                <div class="absolute flex">
-                    <Ping isTutorial={this.state.tutorial === 1} direction={"right"}>
-                        <button
-                            class="relative transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white"
-                            onClick={() => {
-                                if (this.state.tutorial === 1)
-                                    this.setState({ menuOut: !this.state.menuOut, tutorial: 2 })
-                                else
-                                    this.setState({ menuOut: !this.state.menuOut })
-                            }}
-                        >
-                            <FaEquals size="20px" color={"#aaa"} />
-                        </button>
-                    </Ping>
-                </div>
+                <button
+                    id="menu"
+                    class="absolute flex transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white"
+                    onClick={() => {
+                        if (this.state.tutorial)
+                            this.setState({ menuOut: !this.state.menuOut, tutorial: "rpentomino" })
+                        else
+                            this.setState({ menuOut: !this.state.menuOut })
+                    }}
+                >
+                    <FaEquals size="20px" color={"#aaa"} />
+                </button>
 
                 <div class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-x-none px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     <Display
@@ -482,14 +494,17 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
                         <div class="w-11/12 flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md overflow-y-scroll overflow-x-hidden">
-                            <Ping isTutorial={this.state.tutorial === 2} direction={"left"}>
-                                <button onClick={() => {
+                            <button 
+                                id="rpentomino"
+                                onClick={() => {
                                     this.handleModel(this.rpentomino)
-                                    this.setState({ menuOut: true, tutorial: 3 })
+                                    this.setState({ menuOut: true, tutorial: "place" })
                                 }}
-                                    class={`transition duration-300 ease-in-out w-full bg-gray-100 rounded-sm px-5 py-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>R-Pentomino</button>
-                            </Ping>
-                            <button onTouchMove={e => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)} onTouchStart={() => this.handleTouch(this.gun)} onClick={() => this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
+                                class={`transition duration-300 ease-in-out w-full bg-gray-100 rounded-sm px-5 py-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}
+                            >
+                                R-Pentomino
+                            </button>
+                            <button onClick={() => this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
                             <button onClick={() => this.handleModel(this.glider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider</button>
                             <button onClick={() => this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
                             <button onClick={() => this.handleModel(this.pulsar3)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>3-pulsar</button>
@@ -498,7 +513,7 @@ class Board extends React.Component {
                     </div>
                 </div>
             </div>
-            {this.state.tutorial === 0 &&
+            {this.state.tutorial === null &&
                 <div
                     style={{
                         display: "flex",
@@ -515,8 +530,8 @@ class Board extends React.Component {
                             The Game of Life, also known simply as Life, is a cellular automaton devised by the British mathematician John Horton Conway in 1970. It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. It is Turing complete and can simulate a universal constructor or any other Turing machine.
                         </p>
                         <div class="flex flex-row mx-auto w-4/6 justify-between">
-                            <button onClick={() => this.setState({ tutorial: 1 })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
-                            <button onClick={() => this.setState({ tutorial: -1 })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
+                            <button onClick={() => this.setState({ tutorial: "menu" })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
+                            <button onClick={() => this.setState({ tutorial: false })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
                         </div>
                     </div>
                 </div>
