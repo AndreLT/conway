@@ -335,24 +335,56 @@ class Board extends React.Component {
             return this.state.capturingCoordinates.start.y - 5
     }
 
+    handleTutorial(e) {
+        switch (this.state.tutorial){
+            case "place":
+                if(e.target.id === "cursor"){
+                    this.setState({menuOut: false, tutorial: "play"})
+                    document.getElementById("")
+                }
+                break;
+            case "play":
+
+        }
+        if(e.target.id === "cursor" && this.state.tutorial === "place")
+            this.setState({menuOut: false, tutorial: "play"})
+        else if(e.target.id === "play"){
+            window.removeEventListener('click', (e) => this.handleTutorial(e));
+            this.setState({menuOut: true, tutorial: false})
+        }
+    }
+
+    setupTutorial() {
+        window.addEventListener('click', (e) => this.handleTutorial(e));
+        this.setState({ tutorial: "menu" });
+    }
+
     renderTutorialArrow() {
         let position = document.getElementById(this.state.tutorial).getBoundingClientRect();
         const steps = {
-            "menu": 
-                <div style={{position: "absolute", display: "flex", alignItems: "center", left: position.left+100, top: position.top, zIndex: 10}}>
-                    <FaArrowLeft class="animate-bounce" size={35}/>
+            "menu":
+                <div style={{ position: "absolute", display: "flex", alignItems: "center", left: position.left + 100, top: position.top, zIndex: 10 }}>
+                    <FaArrowLeft class="animate-bounce" size={35} />
                     <span class="ml-10 text-lg font-mono">Start by opening the menu</span>
                 </div>,
-            "rpentomino": 
-                <div style={{position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 10}}>
+            "rpentomino":
+                <div style={{ position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 10 }}>
                     <span class="mr-10 text-lg font-mono w-30">Now select the R-Pentonimo pattern from the menu</span>
-                    <FaArrowRight class="animate-bounce" size={35}/>
+                    <FaArrowRight class="animate-bounce" size={35} />
                 </div>,
             "place":
-                <span class="absolute left-50 text-2xl font-mono">Place your pattern anywere on the board</span>   
+                <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 10 }}>Place your pattern anywere on the board</span>,
+            "play":
+                <div style={{ position: "absolute", display: "flex", right: position.width*3, top: position.top, zIndex: 10 }}>
+                    <span class="mr-10 text-lg font-mono w-30">Press play and see what happens!</span>
+                    <FaArrowRight class="animate-bounce" size={35} />
+                </div>,
+        }
+        if(this.state.tutorial !== "place"){
+            document.getElementById(this.state.tutorial).style.zIndex = "20";
         }
         
-        return steps[this.state.tutorial]
+        return <div id="tutorial" style={{display: "flex", position: "absolute", width: "100%", height: "100%", backgroundColor: "rgba(247,247,247,.8)"}}>{steps[this.state.tutorial]}</div>
     }
 
     cancelSelection() {
@@ -373,7 +405,7 @@ class Board extends React.Component {
 
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
             this.setState({ ismobile: navigator.userAgent })
-        
+
     }
 
     componentWillUnmount() {
@@ -413,29 +445,29 @@ class Board extends React.Component {
                             borderRadius: "10px",
                             padding: "5px"
                         }}>
-                            <button 
+                            <button
                                 class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
                                 onClick={() => {
-                                    this.setState({ pattern: this.state.selected }); 
-                                    this.cancelSelection() 
+                                    this.setState({ pattern: this.state.selected });
+                                    this.cancelSelection()
                                 }}
                             >
-                                    <FiCopy size={this.state.ismobile ? 20 : 15} color="green" />
+                                <FiCopy size={this.state.ismobile ? 20 : 15} color="green" />
                             </button>
-                            <button 
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`} 
+                            <button
+                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
                                 onClick={() => console.log(this.state.selected)}
                             >
                                 <GiSaveArrow size={this.state.ismobile ? 20 : 15} color="blue" />
                             </button>
-                            <button 
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`} 
-                                onClick={() => this.randomizeArea(this.state.capturingCoordinates) }
+                            <button
+                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
+                                onClick={() => this.randomizeArea(this.state.capturingCoordinates)}
                             >
                                 <FaDiceD6 size={this.state.ismobile ? 20 : 15} color="turquoise" />
                             </button>
-                            <button 
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-1 mr-2 bg-gray-100`} 
+                            <button
+                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-1 mr-2 bg-gray-100`}
                                 onClick={() => this.cancelSelection()}
                             >
                                 <AiOutlineCloseSquare size={this.state.ismobile ? 20 : 15} color="red" />
@@ -458,7 +490,7 @@ class Board extends React.Component {
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-x-none px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                <div class={`flex flex-col z-index-2 lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     <Display
                         intervalid={this.state.intervalid}
                         alive={this.alive.generation.size}
@@ -469,7 +501,7 @@ class Board extends React.Component {
                     <div class="flex flex-col relative">
                         <div class="flex justify-between">
                             <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} onClick={() => this.step()}><FaStepForward size={20} /></button>
-                            <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} onClick={() => this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
+                            <button id="play" class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} onClick={() => this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
                             <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`} onClick={() => this.stop()}><FaPause size={20} /></button>
                         </div>
                         <div class="flex justify-between p-4">
@@ -494,7 +526,7 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
                         <div class="w-11/12 flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md overflow-y-scroll overflow-x-hidden">
-                            <button 
+                            <button
                                 id="rpentomino"
                                 onClick={() => {
                                     this.handleModel(this.rpentomino)
@@ -526,11 +558,11 @@ class Board extends React.Component {
                     }}>
                     <div class="flex flex-col shadow-resting my-auto bg-gray-100 sm:w-10/12 md:w-4/6 lg:w-1/2 rounded-2xl p-8">
                         <span class="font-bold text-center text-gray-800 mx-auto sm:text-lg md:text-2xl text-4xl">Welcome to Conway's Game of Life</span>
-                        <p class="flex flex-wrap mx-auto my-10 md:my-5 md:text-sm text-justify">
+                        <p class="flex flex-wrap mx-auto my-10 md:my-5 md:text-sm text-justify text-serif">
                             The Game of Life, also known simply as Life, is a cellular automaton devised by the British mathematician John Horton Conway in 1970. It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. It is Turing complete and can simulate a universal constructor or any other Turing machine.
                         </p>
                         <div class="flex flex-row mx-auto w-4/6 justify-between">
-                            <button onClick={() => this.setState({ tutorial: "menu" })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
+                            <button onClick={() => this.setupTutorial()} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
                             <button onClick={() => this.setState({ tutorial: false })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
                         </div>
                     </div>
