@@ -55,13 +55,10 @@ function Alive(){
     }
 
     this.randomizeBoard = () => {
-        for(let i=0; i<this.bounds.x; i++){
-            for(let j=0; j<this.bounds.y; j++){
-                if(Math.floor(Math.random() * Math.floor(2))){
-                    this.generation.set(i + '-' + j, {x:i, y:j})
-                }
-            }
-        }
+        this.randomizeArea({
+            start: {x:0, y:0},
+            end: {x:this.bounds.x, y:this.bounds.y}
+        })
     }
     this.randomizeArea = (bounds) => {
         for(let i=bounds.start.x; i<bounds.end.x; i++){

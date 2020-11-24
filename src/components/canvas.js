@@ -122,7 +122,7 @@ function Canvas(ref, context, size, dimentions){
   this.checkModelBound = (difference, model, bounds) => {
     let patternArea = model["area"];
 
-    if(patternArea.x+difference.x > bounds.x || patternArea.y+difference.y > bounds.y){
+    if(patternArea.x+difference.x+1 > bounds.x || difference.x+1 < 0 || patternArea.y+difference.y+1 > bounds.y || difference.y+1 < 0){
         return false;
     }
     return true;

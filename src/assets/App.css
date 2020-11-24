@@ -17029,6 +17029,10 @@ video {
   z-index: auto;
 }
 
+.z-negative {
+  z-index: -1;
+}
+
 .gap-0 {
   grid-gap: 0;
   gap: 0;
@@ -37029,6 +37033,10 @@ video {
     z-index: auto;
   }
 
+  .sm\:z-negative {
+    z-index: -1;
+  }
+
   .sm\:gap-0 {
     grid-gap: 0;
     gap: 0;
@@ -56997,6 +57005,10 @@ video {
 
   .md\:z-auto {
     z-index: auto;
+  }
+
+  .md\:z-negative {
+    z-index: -1;
   }
 
   .md\:gap-0 {
@@ -76969,6 +76981,10 @@ video {
     z-index: auto;
   }
 
+  .lg\:z-negative {
+    z-index: -1;
+  }
+
   .lg\:gap-0 {
     grid-gap: 0;
     gap: 0;
@@ -96937,6 +96953,10 @@ video {
 
   .xl\:z-auto {
     z-index: auto;
+  }
+
+  .xl\:z-negative {
+    z-index: -1;
   }
 
   .xl\:gap-0 {

@@ -1,7 +1,8 @@
 import React from 'react';
 import { FaPlay, FaStepForward, FaArrowLeft, FaArrowRight, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
-import { AiOutlineCloseSquare } from 'react-icons/ai';
+import { AiOutlineCloseSquare, AiOutlineRotateRight } from 'react-icons/ai';
+import { CgEditFlipH } from 'react-icons/cg'
 import { FiCopy } from 'react-icons/fi';
 import { GiSaveArrow } from 'react-icons/gi';
 import { MdSelectAll } from 'react-icons/md';
@@ -9,7 +10,7 @@ import { MdSelectAll } from 'react-icons/md';
 import Canvas from './canvas';
 import Alive from './alive';
 import Display from './display';
-import Ping from './ping';
+import PatternButton from './partternbutton'
 
 
 class Board extends React.Component {
@@ -60,55 +61,7 @@ class Board extends React.Component {
     }
 
     handleKeyPress(key) {
-
-        const updateCursor = (difference) => {
-
-            let boundAdjusted = this.alive.boundAdjusted(difference)
-
-            this.cursorCanvas.drawCursor(boundAdjusted);
-
-            if (this.state.pattern)
-                this.placeModel(difference, this.state.pattern, this.alive.bounds);
-
-            if (this.state.capturing)
-                this.cursorCanvas.drawCaptureArea(this.state.capturing, boundAdjusted)
-
-            Object.assign(this.data, { cursorcoord: boundAdjusted });
-        }
-
         switch (key) {
-            case 'ArrowUp':
-                updateCursor({ x: this.state.cursorcoord.x, y: this.state.cursorcoord.y - 1 })
-                break;
-            case 'ArrowDown':
-                updateCursor({ x: this.state.cursorcoord.x, y: this.state.cursorcoord.y + 1 })
-                break;
-            case 'ArrowRight':
-                updateCursor({ x: this.state.cursorcoord.x + 1, y: this.state.cursorcoord.y })
-                break;
-            case 'ArrowLeft':
-                updateCursor({ x: this.state.cursorcoord.x - 1, y: this.state.cursorcoord.y })
-                break;
-            case 'a':
-                if (this.state.pattern) {
-                    if (this.cursorCanvas.checkModelBound(this.state.cursorcoord, this.state.pattern, this.alive.bounds)) {
-                        this.alive.conceiveModel(this.state.pattern, this.state.cursorcoord);
-                        this.cursorCanvas.clear();
-                        Object.assign(this.data, { pattern: null });
-                    }
-                } else {
-                    let coord = this.state.cursorcoord;
-                    this.alive.generation.set(coord.x + '-' + coord.y, { x: coord.x, y: coord.y })
-                }
-                this.canvas.draw(this.alive.generation);
-                break;
-            case 'e':
-                console.log(this.state.testoffset)
-                break;
-            case 'c':
-                Object.assign(this.data, { capturing: null, pattern: null });
-                this.cursorCanvas.drawCursor(this.state.cursorcoord);
-                break;
             case 'r':
                 if (this.state.pattern) { }
                 this.handleModel(this.canvas.rotateModel(this.state.pattern))
@@ -163,9 +116,14 @@ class Board extends React.Component {
         this.dispatch();
     }
 
+    centerModel = (coordinates, area) => {
+        return { x: coordinates.x - Math.ceil(area.x / 2), y: coordinates.y - Math.ceil(area.y / 2) };
+    }
+
     placeModel = (coordinates, model, bounds) => {
-        let isLegal = this.cursorCanvas.checkModelBound(coordinates, model, bounds);
-        this.cursorCanvas.drawModel(model, coordinates, isLegal ? "blue" : "red");
+        let centeredCursor = this.centerModel(coordinates, model.area)
+        let isLegal = this.cursorCanvas.checkModelBound(centeredCursor, model, bounds);
+        this.cursorCanvas.drawModel(model, centeredCursor, isLegal ? "blue" : "red");
     }
 
     toggleGrid = () => {
@@ -206,23 +164,27 @@ class Board extends React.Component {
     }
 
     handleClick = () => {
-        if (this.state.pattern) {
-            if (this.cursorCanvas.checkModelBound(this.state.cursorcoord, this.state.pattern, this.alive.bounds)) {
-                this.alive.conceiveModel(this.state.pattern, this.state.cursorcoord);
-                this.cursorCanvas.clear();
-                Object.assign(this.data, { pattern: null });
+        if(!this.state.capturing && !this.state.selected){
+            if (this.state.pattern) {
+                let centeredModel = this.centerModel(this.state.cursorcoord, this.state.pattern.area);
+                if (this.cursorCanvas.checkModelBound(centeredModel, this.state.pattern, this.alive.bounds)) {
+                    this.alive.conceiveModel(this.state.pattern, centeredModel);
+                    this.cursorCanvas.clear();
+                    Object.assign(this.data, { pattern: null });
+                }
+            } else {
+                let coord = this.state.cursorcoord;
+                this.alive.generation.set(coord.x + '-' + coord.y, { x: coord.x, y: coord.y })
             }
-        } else {
-            let coord = this.state.cursorcoord;
-            this.alive.generation.set(coord.x + '-' + coord.y, { x: coord.x, y: coord.y })
+            this.canvas.draw(this.alive.generation);
         }
-        this.canvas.draw(this.alive.generation);
     }
 
     clear = () => {
         this.stop();
         this.alive.killAll();
-        this.step();
+        this.canvas.clear();
+        this.setState({ generation: 0 })
     }
 
     initCanvas() {
@@ -262,9 +224,7 @@ class Board extends React.Component {
 
     handleMouseUp() {
         let newState = {};
-        const capture = () => {
-            const start = this.state.capturingCoordinates.start;
-            const end = this.state.cursorcoord;
+        const capture = (start, end) => {
             const area = { x: 0, y: 0 }
             const blueprint = {};
             let counter = 1;
@@ -289,9 +249,10 @@ class Board extends React.Component {
         }
 
         if (this.state.capturing) {
-            let captured = capture();
             let start = { x: Math.min(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.min(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
             let end = { x: Math.max(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.max(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
+            let captured = capture(start, end);
+            console.log(start, end)
             Object.assign(newState, { selected: captured, capturing: false, capturingCoordinates: { start: start, end: end } })
         }
 
@@ -312,7 +273,6 @@ class Board extends React.Component {
     }
 
     handleMouseDown(coordinates) {
-        console.log(coordinates)
         if (this.state.intervalid) {
             this.setState({ paused: true })
             this.stop();
@@ -323,72 +283,87 @@ class Board extends React.Component {
         this.setState({ mouseDown: true })
     }
 
+    handleMouseOut(){
+        if(this.state.capturing)
+            this.handleMouseUp();
+        else
+            this.setState({mouseDown: false})
+    }
+
     handleTouch(model) {
         Object.assign(this.data, { menuOut: true })
         this.handleModel(model)
     }
 
-    toolbarYPlacement() {
-        if (this.state.capturingCoordinates.start.y < 7)
-            return this.state.capturingCoordinates.end.y + 1
-        else
-            return this.state.capturingCoordinates.start.y - 5
-    }
+    handleTutorial() {
 
-    handleTutorial(e) {
-        switch (this.state.tutorial){
-            case "place":
-                if(e.target.id === "cursor"){
-                    this.setState({menuOut: false, tutorial: "play"})
-                    document.getElementById("")
-                }
+        const addListener = (next) => {
+            let nextListener = document.getElementById(next);
+            nextListener.addEventListener('click', () => this.handleTutorial());
+        }
+        const removeListener = (current) => {
+            let currentListener = document.getElementById(current);
+            currentListener.removeEventListener('click', () => this.handleTutorial());
+        }
+
+        switch (this.state.tutorial) {
+            case "menu":
+                removeListener("menu");
+                addListener("rpentomino");
+                this.setState({ tutorial: "rpentomino" })
+                break;
+            case "rpentomino":
+                removeListener("rpentomino");
+                addListener("cursor");
+                this.setState({ menuOut: true, tutorial: "skipped" })
+                break;
+            case "skipped":
+                removeListener("cursor");
+                addListener("play");
+                document.getElementById("play").style.zIndex = 40
+                this.setState({ menuOut: false, tutorial: "play" })
                 break;
             case "play":
-
-        }
-        if(e.target.id === "cursor" && this.state.tutorial === "place")
-            this.setState({menuOut: false, tutorial: "play"})
-        else if(e.target.id === "play"){
-            window.removeEventListener('click', (e) => this.handleTutorial(e));
-            this.setState({menuOut: true, tutorial: false})
+                removeListener("play")
+                this.setState({ tutorial: false })
+                break;
         }
     }
 
     setupTutorial() {
-        window.addEventListener('click', (e) => this.handleTutorial(e));
+        let menub = document.getElementById("menu")
+        menub.addEventListener('click', (e) => this.handleTutorial(e));
         this.setState({ tutorial: "menu" });
     }
 
     renderTutorialArrow() {
+        console.log(this.state.tutorial)
         let position = document.getElementById(this.state.tutorial).getBoundingClientRect();
         const steps = {
             "menu":
-                <div style={{ position: "absolute", display: "flex", alignItems: "center", left: position.left + 100, top: position.top, zIndex: 10 }}>
+                <div style={{ position: "absolute", display: "flex", alignItems: "center", left: position.left + 100, top: position.top, zIndex: 60 }}>
                     <FaArrowLeft class="animate-bounce" size={35} />
                     <span class="ml-10 text-lg font-mono">Start by opening the menu</span>
                 </div>,
             "rpentomino":
-                <div style={{ position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 10 }}>
+                <div style={{ position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 60 }}>
                     <span class="mr-10 text-lg font-mono w-30">Now select the R-Pentonimo pattern from the menu</span>
                     <FaArrowRight class="animate-bounce" size={35} />
                 </div>,
-            "place":
+            "cursor":
                 <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 10 }}>Place your pattern anywere on the board</span>,
             "play":
-                <div style={{ position: "absolute", display: "flex", right: position.width*3, top: position.top, zIndex: 10 }}>
+                <div style={{ position: "absolute", display: "flex", right: position.width * 3, top: position.top, zIndex: 60 }}>
                     <span class="mr-10 text-lg font-mono w-30">Press play and see what happens!</span>
                     <FaArrowRight class="animate-bounce" size={35} />
                 </div>,
         }
-        if(this.state.tutorial !== "place"){
-            document.getElementById(this.state.tutorial).style.zIndex = "20";
-        }
-        
-        return <div id="tutorial" style={{display: "flex", position: "absolute", width: "100%", height: "100%", backgroundColor: "rgba(247,247,247,.8)"}}>{steps[this.state.tutorial]}</div>
+
+        return steps[this.state.tutorial]
     }
 
     cancelSelection() {
-        this.setState({
+        Object.assign(this.data, {
             selected: null,
             capturingCoordinates: null
         })
@@ -413,12 +388,13 @@ class Board extends React.Component {
     }
 
     render() {
+        const isTutorial = this.state.tutorial && this.state.tutorial !== "skipped"
 
-        return <div class="bg-gray-200 overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
-            <div id="place" class="flex flex-row w-full h-full m-auto">
-                {this.state.tutorial && this.renderTutorialArrow()}
-                <div class="flex z-index-4 m-auto" tabIndex="-1">
-
+        return <div class="bg-transparent overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
+            <div class="flex flex-row w-full h-full">
+                {isTutorial && this.renderTutorialArrow()}
+                <div class="flex justify-center align-center w-full h-full z-0 m-auto bg-gray-200" tabIndex="-1">
+                    {isTutorial && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.8)" }} />}
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
 
                     <canvas
@@ -431,47 +407,64 @@ class Board extends React.Component {
                         onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)}
                         onMouseDown={() => this.handleMouseDown(this.state.cursorcoord)}
                         onMouseUp={() => this.handleMouseUp()}
+                        onMouseOut={() => this.handleMouseOut()}
                         onClick={() => this.handleClick()}
                     />
 
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
                     {this.state.selected &&
-                        <div style={{
-                            display: "flex",
-                            position: "absolute",
-                            justifyContent: "space-between",
-                            left: this.state.capturingCoordinates.start.x * this.state.size,
-                            top: this.toolbarYPlacement() * this.state.size,
-                            borderRadius: "10px",
-                            padding: "5px"
-                        }}>
-                            <button
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
-                                onClick={() => {
-                                    this.setState({ pattern: this.state.selected });
-                                    this.cancelSelection()
-                                }}
-                            >
-                                <FiCopy size={this.state.ismobile ? 20 : 15} color="green" />
-                            </button>
-                            <button
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
-                                onClick={() => console.log(this.state.selected)}
-                            >
-                                <GiSaveArrow size={this.state.ismobile ? 20 : 15} color="blue" />
-                            </button>
-                            <button
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
-                                onClick={() => this.randomizeArea(this.state.capturingCoordinates)}
-                            >
-                                <FaDiceD6 size={this.state.ismobile ? 20 : 15} color="turquoise" />
-                            </button>
-                            <button
-                                class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-1 mr-2 bg-gray-100`}
-                                onClick={() => this.cancelSelection()}
-                            >
-                                <AiOutlineCloseSquare size={this.state.ismobile ? 20 : 15} color="red" />
-                            </button>
+                        <div class="bg-red-300">
+                            <div style={{
+                                display: "flex",
+                                position: "absolute",
+                                justifyContent: "space-between",
+                                left: this.state.capturingCoordinates.start.x * this.state.size,
+                                top: ((this.state.capturingCoordinates.start.y < 7 && this.state.capturingCoordinates.end.y + 1) || this.state.capturingCoordinates.start.y - 5) * this.state.size,
+                                padding: "5px"
+                            }}>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
+                                    onClick={() => this.handleModel(this.canvas.rotateModel(this.state.selected))}
+                                >
+                                    <AiOutlineRotateRight size={this.state.ismobile ? 20 : 15} color="green" />
+                                </button>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
+                                    onClick={() => this.handleModel(this.canvas.rotateModel(this.state.selected))}
+                                >
+                                    <CgEditFlipH size={this.state.ismobile ? 20 : 15} color="green" />
+                                </button>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
+                                    onClick={() => {
+                                        this.setState({ pattern: this.state.selected });
+                                        this.cancelSelection()
+                                    }}
+                                >
+                                    <FiCopy size={this.state.ismobile ? 20 : 15} color="green" />
+                                </button>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
+                                    onClick={() => console.log(this.state.selected)}
+                                >
+                                    <GiSaveArrow size={this.state.ismobile ? 20 : 15} color="blue" />
+                                </button>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
+                                    onClick={() => this.randomizeArea(this.state.capturingCoordinates)}
+                                >
+                                    <FaDiceD6 size={this.state.ismobile ? 20 : 15} color="turquoise" />
+                                </button>
+                                <button
+                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-1 mr-2 bg-gray-100`}
+                                    onClick={() => {
+                                        this.cancelSelection()
+                                        this.dispatch();
+                                    }}
+                                >
+                                    <AiOutlineCloseSquare size={this.state.ismobile ? 20 : 15} color="red" />
+                                </button>
+                            </div>
                         </div>
                     }
 
@@ -479,18 +472,14 @@ class Board extends React.Component {
 
                 <button
                     id="menu"
-                    class="absolute flex transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-index-5 focus:outline-none hover:bg-white"
-                    onClick={() => {
-                        if (this.state.tutorial)
-                            this.setState({ menuOut: !this.state.menuOut, tutorial: "rpentomino" })
-                        else
-                            this.setState({ menuOut: !this.state.menuOut })
-                    }}
+                    class="absolute flex transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-40 focus:outline-none hover:bg-white"
+                    onClick={() => this.setState({ menuOut: !this.state.menuOut })}
                 >
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div class={`flex flex-col z-index-2 lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                <div class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                    {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.8)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
                     <Display
                         intervalid={this.state.intervalid}
                         alive={this.alive.generation.size}
@@ -500,9 +489,38 @@ class Board extends React.Component {
                     />
                     <div class="flex flex-col relative">
                         <div class="flex justify-between">
-                            <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} onClick={() => this.step()}><FaStepForward size={20} /></button>
-                            <button id="play" class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} onClick={() => this.runtime(this.state.fps)} disabled={this.state.intervalid}><FaPlay size={20} /></button>
-                            <button class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`} onClick={() => this.stop()}><FaPause size={20} /></button>
+
+                            <button 
+                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} 
+                                onClick={() => {
+                                    if(this.state.selected)
+                                        this.cancelSelection();
+                                    this.step()
+                                }}
+                            >
+                                <FaStepForward size={20} />
+                            </button>
+
+                            <button 
+                                id="play" 
+                                class={`transition duration-300 ease-in-out border-4 border-transparent bg-gray-200 rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} 
+                                onClick={() => {
+                                    if(this.state.selected)
+                                        this.cancelSelection();
+                                    this.runtime(this.state.fps)
+                                }}
+                                disabled={this.state.intervalid}
+                            >
+                                <FaPlay size={20} />
+                            </button>
+
+                            <button 
+                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`} 
+                                onClick={() => this.stop()}
+                            >
+                                <FaPause size={20} />
+                            </button>
+
                         </div>
                         <div class="flex justify-between p-4">
                             <button class="my-auto" onClick={() => this.speed(this.state.fps + 50)} disabled={this.state.fps >= 600}><FaBackward /></button>
@@ -513,7 +531,7 @@ class Board extends React.Component {
                         </div>
                         <div class="flex justify-between p-4">
                             <button
-                                class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none"
+                                class="px-4 m-auto py-2 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none"
                                 onClick={() => {
                                     this.stop();
                                     this.setState({ menuOut: true, capturing: true })
@@ -521,26 +539,17 @@ class Board extends React.Component {
                             >
                                 <MdSelectAll />
                             </button>
-                            <button class="px-4 m-auto py-2 z-index-5 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize(this.alive.bounds)}><FaDiceD6 /></button>
-                            <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
-                            <button class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
+                            <button class="px-4 m-auto py-2 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize(this.alive.bounds)}><FaDiceD6 /></button>
+                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
+                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
-                        <div class="w-11/12 flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md overflow-y-scroll overflow-x-hidden">
-                            <button
-                                id="rpentomino"
-                                onClick={() => {
-                                    this.handleModel(this.rpentomino)
-                                    this.setState({ menuOut: true, tutorial: "place" })
-                                }}
-                                class={`transition duration-300 ease-in-out w-full bg-gray-100 rounded-sm px-5 py-2 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}
-                            >
-                                R-Pentomino
-                            </button>
-                            <button onClick={() => this.handleModel(this.gun)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider Gun</button>
-                            <button onClick={() => this.handleModel(this.glider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Glider</button>
-                            <button onClick={() => this.handleModel(this.megaglider)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Mega Glider</button>
-                            <button onClick={() => this.handleModel(this.pulsar3)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>3-pulsar</button>
-                            <button onClick={() => this.handleModel(this.ap11)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>Achim's p11</button>
+                        <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md overflow-y-scroll overflow-x-hidden bg-gray-200">
+                            <button id="rpentomino" onClick={() => this.handleModel(this.rpentomino)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 z-40 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>R-Pentomino</button>
+                            <PatternButton onClick={() => this.handleModel(this.gun)}>Glider Gun</PatternButton>
+                            <PatternButton onClick={() => this.handleModel(this.glider)}>Glider</PatternButton>
+                            <PatternButton onClick={() => this.handleModel(this.megaglider)}>Mega Glider</PatternButton>
+                            <PatternButton onClick={() => this.handleModel(this.pulsar3)}>3-pulsar</PatternButton>
+                            <PatternButton onClick={() => this.handleModel(this.ap11)}>Achim's p11</PatternButton>
                         </div>
                     </div>
                 </div>
@@ -562,8 +571,8 @@ class Board extends React.Component {
                             The Game of Life, also known simply as Life, is a cellular automaton devised by the British mathematician John Horton Conway in 1970. It is a zero-player game, meaning that its evolution is determined by its initial state, requiring no further input. One interacts with the Game of Life by creating an initial configuration and observing how it evolves. It is Turing complete and can simulate a universal constructor or any other Turing machine.
                         </p>
                         <div class="flex flex-row mx-auto w-4/6 justify-between">
-                            <button onClick={() => this.setupTutorial()} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
-                            <button onClick={() => this.setState({ tutorial: false })} class="px-4 m-auto py-2 z-index-5 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
+                            <button onClick={() => this.setupTutorial()} class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
+                            <button onClick={() => this.setState({ tutorial: false })} class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
                         </div>
                     </div>
                 </div>
