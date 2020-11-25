@@ -60,6 +60,7 @@ function Alive(){
             end: {x:this.bounds.x, y:this.bounds.y}
         })
     }
+    
     this.randomizeArea = (bounds) => {
         for(let i=bounds.start.x; i<bounds.end.x; i++){
             for(let j=bounds.start.y; j<bounds.end.y; j++){

@@ -1,16 +1,13 @@
 import React from 'react';
 import { FaPlay, FaStepForward, FaArrowLeft, FaArrowRight, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
-import { AiOutlineCloseSquare, AiOutlineRotateRight } from 'react-icons/ai';
-import { CgEditFlipH } from 'react-icons/cg'
-import { FiCopy } from 'react-icons/fi';
-import { GiSaveArrow } from 'react-icons/gi';
 import { MdSelectAll } from 'react-icons/md';
 
 import Canvas from './canvas';
 import Alive from './alive';
 import Display from './display';
 import PatternButton from './partternbutton'
+import Toolbar from './toolbar'
 
 
 class Board extends React.Component {
@@ -50,6 +47,7 @@ class Board extends React.Component {
             selected: null,
             ismobile: null,
             testoffset: null,
+            placing: { model: null, coord: null },
         };
     }
 
@@ -111,19 +109,19 @@ class Board extends React.Component {
     }
 
     handleModel = (model) => {
-        Object.assign(this.data, { pattern: model });
-        this.placeModel(this.state.cursorcoord, model, this.alive.bounds);
+        let x = Math.floor((document.getElementById("control").getBoundingClientRect().x / this.state.size) / 2)
+        let y = Math.floor(this.alive.bounds.y / 2)
+        let centeredCoordinates = this.centerModel({ x: x, y: y }, model.area)
+        Object.assign(this.data, { placing: { model: model, coord: centeredCoordinates }, pattern: model });
+        this.placeModel(centeredCoordinates, model, this.alive.bounds);
         this.dispatch();
     }
 
-    centerModel = (coordinates, area) => {
-        return { x: coordinates.x - Math.ceil(area.x / 2), y: coordinates.y - Math.ceil(area.y / 2) };
-    }
+    centerModel = (coordinates, area) => { return { x: coordinates.x - Math.ceil(area.x / 2), y: coordinates.y - Math.ceil(area.y / 2) } };
 
     placeModel = (coordinates, model, bounds) => {
-        let centeredCursor = this.centerModel(coordinates, model.area)
-        let isLegal = this.cursorCanvas.checkModelBound(centeredCursor, model, bounds);
-        this.cursorCanvas.drawModel(model, centeredCursor, isLegal ? "blue" : "red");
+        let isLegal = this.cursorCanvas.checkModelBound(coordinates, model, bounds);
+        this.cursorCanvas.drawModel(model, coordinates, isLegal ? "blue" : "red");
     }
 
     toggleGrid = () => {
@@ -148,8 +146,8 @@ class Board extends React.Component {
             this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
         }
 
-        if (this.state.pattern)
-            this.placeModel(coordinates, this.state.pattern, this.alive.bounds);
+        if (this.state.placing.model)
+            this.placeModel(this.state.placing.coord, this.state.placing.model, this.alive.bounds);
 
         else if (this.state.mouseDown) {
 
@@ -164,7 +162,7 @@ class Board extends React.Component {
     }
 
     handleClick = () => {
-        if(!this.state.capturing && !this.state.selected){
+        if (!this.state.capturing && !this.state.selected) {
             if (this.state.pattern) {
                 let centeredModel = this.centerModel(this.state.cursorcoord, this.state.pattern.area);
                 if (this.cursorCanvas.checkModelBound(centeredModel, this.state.pattern, this.alive.bounds)) {
@@ -237,6 +235,7 @@ class Board extends React.Component {
 
                         blueprint[counter] = { x: relativeX, y: relativeY };
                         counter++
+
                         if (relativeX > area.x)
                             area.x = relativeX
                         if (relativeY > area.y)
@@ -252,7 +251,6 @@ class Board extends React.Component {
             let start = { x: Math.min(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.min(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
             let end = { x: Math.max(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.max(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
             let captured = capture(start, end);
-            console.log(start, end)
             Object.assign(newState, { selected: captured, capturing: false, capturingCoordinates: { start: start, end: end } })
         }
 
@@ -283,11 +281,11 @@ class Board extends React.Component {
         this.setState({ mouseDown: true })
     }
 
-    handleMouseOut(){
-        if(this.state.capturing)
+    handleMouseOut() {
+        if (this.state.capturing)
             this.handleMouseUp();
         else
-            this.setState({mouseDown: false})
+            this.setState({ mouseDown: false })
     }
 
     handleTouch(model) {
@@ -351,7 +349,7 @@ class Board extends React.Component {
                     <FaArrowRight class="animate-bounce" size={35} />
                 </div>,
             "cursor":
-                <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 10 }}>Place your pattern anywere on the board</span>,
+                <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 60 }}>Place your pattern anywere on the board</span>,
             "play":
                 <div style={{ position: "absolute", display: "flex", right: position.width * 3, top: position.top, zIndex: 60 }}>
                     <span class="mr-10 text-lg font-mono w-30">Press play and see what happens!</span>
@@ -394,7 +392,7 @@ class Board extends React.Component {
             <div class="flex flex-row w-full h-full">
                 {isTutorial && this.renderTutorialArrow()}
                 <div class="flex justify-center align-center w-full h-full z-0 m-auto bg-gray-200" tabIndex="-1">
-                    {isTutorial && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.8)" }} />}
+                    {isTutorial && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.6)" }} />}
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
 
                     <canvas
@@ -412,60 +410,20 @@ class Board extends React.Component {
                     />
 
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
+
                     {this.state.selected &&
-                        <div class="bg-red-300">
-                            <div style={{
-                                display: "flex",
-                                position: "absolute",
-                                justifyContent: "space-between",
-                                left: this.state.capturingCoordinates.start.x * this.state.size,
-                                top: ((this.state.capturingCoordinates.start.y < 7 && this.state.capturingCoordinates.end.y + 1) || this.state.capturingCoordinates.start.y - 5) * this.state.size,
-                                padding: "5px"
-                            }}>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
-                                    onClick={() => this.handleModel(this.canvas.rotateModel(this.state.selected))}
-                                >
-                                    <AiOutlineRotateRight size={this.state.ismobile ? 20 : 15} color="green" />
-                                </button>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
-                                    onClick={() => this.handleModel(this.canvas.rotateModel(this.state.selected))}
-                                >
-                                    <CgEditFlipH size={this.state.ismobile ? 20 : 15} color="green" />
-                                </button>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-2 mr-1 bg-gray-100`}
-                                    onClick={() => {
-                                        this.setState({ pattern: this.state.selected });
-                                        this.cancelSelection()
-                                    }}
-                                >
-                                    <FiCopy size={this.state.ismobile ? 20 : 15} color="green" />
-                                </button>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
-                                    onClick={() => console.log(this.state.selected)}
-                                >
-                                    <GiSaveArrow size={this.state.ismobile ? 20 : 15} color="blue" />
-                                </button>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} mx-1 bg-gray-100`}
-                                    onClick={() => this.randomizeArea(this.state.capturingCoordinates)}
-                                >
-                                    <FaDiceD6 size={this.state.ismobile ? 20 : 15} color="turquoise" />
-                                </button>
-                                <button
-                                    class={`flex rounded-md ${this.state.ismobile ? 'p-4' : 'p-2'} ml-1 mr-2 bg-gray-100`}
-                                    onClick={() => {
-                                        this.cancelSelection()
-                                        this.dispatch();
-                                    }}
-                                >
-                                    <AiOutlineCloseSquare size={this.state.ismobile ? 20 : 15} color="red" />
-                                </button>
-                            </div>
-                        </div>
+                        <Toolbar
+                            render={this.state.selected}
+                            capCoordinates={this.state.capturingCoordinates}
+                            size={this.state.size}
+                            isMobile={this.state.ismobile}
+                            rotate={this.canvas.rotateModel}
+                            invert={this.canvas.inverseModel}
+                            randomize={this.randomizeArea}
+                            cancel={this.cancelSelection}
+                            dispatch={this.dispatch}
+                            selected={this.state.selected}
+                        />
                     }
 
                 </div>
@@ -478,8 +436,8 @@ class Board extends React.Component {
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
-                    {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.8)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
+                <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                    {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
                     <Display
                         intervalid={this.state.intervalid}
                         alive={this.alive.generation.size}
@@ -490,10 +448,10 @@ class Board extends React.Component {
                     <div class="flex flex-col relative">
                         <div class="flex justify-between">
 
-                            <button 
-                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`} 
+                            <button
+                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`}
                                 onClick={() => {
-                                    if(this.state.selected)
+                                    if (this.state.selected)
                                         this.cancelSelection();
                                     this.step()
                                 }}
@@ -501,11 +459,11 @@ class Board extends React.Component {
                                 <FaStepForward size={20} />
                             </button>
 
-                            <button 
-                                id="play" 
-                                class={`transition duration-300 ease-in-out border-4 border-transparent bg-gray-200 rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`} 
+                            <button
+                                id="play"
+                                class={`transition duration-300 ease-in-out border-4 border-transparent bg-gray-200 rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`}
                                 onClick={() => {
-                                    if(this.state.selected)
+                                    if (this.state.selected)
                                         this.cancelSelection();
                                     this.runtime(this.state.fps)
                                 }}
@@ -514,8 +472,8 @@ class Board extends React.Component {
                                 <FaPlay size={20} />
                             </button>
 
-                            <button 
-                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`} 
+                            <button
+                                class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-resting' : 'shadow-button'}`}
                                 onClick={() => this.stop()}
                             >
                                 <FaPause size={20} />
