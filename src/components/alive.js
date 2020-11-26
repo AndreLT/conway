@@ -71,6 +71,19 @@ function Alive(){
         }
     }
 
+    this.clearArea = (bounds) => {
+        let victims = [];
+        for(let i=bounds.start.x; i<bounds.end.x; i++){
+            for(let j=bounds.start.y; j<bounds.end.y; j++){
+                let cellName = i + '-' + j
+                if(this.generation.has(cellName))
+                    victims.push(cellName)
+            }
+        }
+        console.log(victims)
+        this.kill(victims);
+    }
+
     this.boundAdjusted = (coordinates) => {
         let newcoordinates = coordinates
 
@@ -140,6 +153,7 @@ function Alive(){
     this.killAll = () => {
         this.generation.clear();
     }
+
 }
 
 export default Alive;

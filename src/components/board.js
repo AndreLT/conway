@@ -48,6 +48,7 @@ class Board extends React.Component {
             ismobile: null,
             testoffset: null,
             placing: { model: null, coord: null },
+            overModel: false,
         };
     }
 
@@ -56,20 +57,11 @@ class Board extends React.Component {
         Object.assign(updated, { ...this.data });
         this.setState({ ...updated })
         this.data = {};
+        this.canvas.draw(this.alive.generation);
     }
 
     handleKeyPress(key) {
-        switch (key) {
-            case 'r':
-                if (this.state.pattern) { }
-                this.handleModel(this.canvas.rotateModel(this.state.pattern))
-                break;
-            case 'q':
-                if (this.state.pattern)
-                    this.handleModel(this.canvas.inverseModel(this.state.pattern))
-                break;
-        }
-        this.dispatch();
+        console.log(key)
     }
 
     randomize = () => {
@@ -112,16 +104,50 @@ class Board extends React.Component {
         let x = Math.floor((document.getElementById("control").getBoundingClientRect().x / this.state.size) / 2)
         let y = Math.floor(this.alive.bounds.y / 2)
         let centeredCoordinates = this.centerModel({ x: x, y: y }, model.area)
-        Object.assign(this.data, { placing: { model: model, coord: centeredCoordinates }, pattern: model });
+
+        Object.assign(this.data, {
+            placing: {
+                model: model,
+                bounds: {
+                    start: centeredCoordinates,
+                    end: {
+                        x: centeredCoordinates.x + model.area.x,
+                        y: centeredCoordinates.y + model.area.y
+                    }
+                }
+            }
+        });
+
         this.placeModel(centeredCoordinates, model, this.alive.bounds);
         this.dispatch();
+    }
+
+    //mouseX and mouseY are already scaled down to canvas coordinates
+    mouseOverModel = (mouseX, mouseY) => {
+        let bounds = this.state.placing.bounds;
+        if (mouseX >= bounds.start.x && mouseY >= bounds.start.y && mouseX <= bounds.end.x && mouseY <= bounds.end.y)
+            return true
+        return false
     }
 
     centerModel = (coordinates, area) => { return { x: coordinates.x - Math.ceil(area.x / 2), y: coordinates.y - Math.ceil(area.y / 2) } };
 
     placeModel = (coordinates, model, bounds) => {
-        let isLegal = this.cursorCanvas.checkModelBound(coordinates, model, bounds);
-        this.cursorCanvas.drawModel(model, coordinates, isLegal ? "blue" : "red");
+        if(this.cursorCanvas.checkModelBound(coordinates, model, bounds)){
+            Object.assign(this.data, {
+                placing:{
+                    model: model,
+                    bounds: {
+                        start: coordinates,
+                        end: {
+                            x: coordinates.x+model.area.x,
+                            y: coordinates.y+model.area.y
+                        }
+                    }
+                }
+            })
+            this.cursorCanvas.drawModel(model, coordinates, "blue");
+        }
     }
 
     toggleGrid = () => {
@@ -140,21 +166,25 @@ class Board extends React.Component {
         let scaledY = Math.floor(clientY / this.state.size)
 
         let coordinates = { x: scaledX, y: scaledY }
-        this.cursorCanvas.drawCursor(coordinates);
 
-        if (this.state.selected) {
-            this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
-        }
+        if (this.state.mouseDown) {
 
-        if (this.state.placing.model)
-            this.placeModel(this.state.placing.coord, this.state.placing.model, this.alive.bounds);
-
-        else if (this.state.mouseDown) {
-
-            if (this.state.capturingCoordinates)
-                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue")
+            if (this.state.capturing)
+                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue");
+            else if(this.state.overModel){
+                let centeredCoord = this.centerModel(coordinates, this.state.placing.model.area);
+                this.placeModel(centeredCoord, this.state.placing.model, this.alive.bounds);
+            }
             else
                 this.handleClick();
+
+        }else if(this.state.placing.model){
+            Object.assign(this.data, { overModel: this.mouseOverModel(coordinates.x, coordinates.y) });
+        }else{
+            if (this.state.selected) 
+                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
+            else
+                this.cursorCanvas.drawCursor(coordinates);
         }
 
         Object.assign(this.data, { cursorcoord: coordinates });
@@ -162,13 +192,13 @@ class Board extends React.Component {
     }
 
     handleClick = () => {
-        if (!this.state.capturing && !this.state.selected) {
-            if (this.state.pattern) {
-                let centeredModel = this.centerModel(this.state.cursorcoord, this.state.pattern.area);
-                if (this.cursorCanvas.checkModelBound(centeredModel, this.state.pattern, this.alive.bounds)) {
-                    this.alive.conceiveModel(this.state.pattern, centeredModel);
+        if (!this.state.capturing && !this.state.selected && !this.state.placing.model) {
+            if (this.state.placing.model) {
+                let centeredModel = this.centerModel(this.state.cursorcoord, this.state.placing.model.area);
+                if (this.cursorCanvas.checkModelBound(centeredModel, this.state.placing.model, this.alive.bounds)) {
+                    this.alive.conceiveModel(this.state.placing.model, centeredModel);
                     this.cursorCanvas.clear();
-                    Object.assign(this.data, { pattern: null });
+                    Object.assign(this.data, { placing: null });
                 }
             } else {
                 let coord = this.state.cursorcoord;
@@ -360,8 +390,8 @@ class Board extends React.Component {
         return steps[this.state.tutorial]
     }
 
-    cancelSelection() {
-        Object.assign(this.data, {
+    cancelSelection = () => {
+       Object.assign(this.data, {
             selected: null,
             capturingCoordinates: null
         })
@@ -397,12 +427,12 @@ class Board extends React.Component {
 
                     <canvas
                         id="cursor"
-                        class={"bg-transparent m-auto absolute"}
+                        class={`bg-transparent m-auto absolute ${this.state.overModel && 'cursor-move'}`}
                         ref={this.cursorRef}
                         onTouchStart={(e) => this.handleTouchCoord(e.touches[0].clientX, e.touches[0].clientY)}
                         onTouchEnd={() => this.handleMouseUp()}
-                        onTouchMove={e => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)}
-                        onMouseMove={e => this.handleMouseMove(e.clientX, e.clientY)}
+                        onTouchMove={(e) => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)}
+                        onMouseMove={(e) => this.handleMouseMove(e.clientX, e.clientY)}
                         onMouseDown={() => this.handleMouseDown(this.state.cursorcoord)}
                         onMouseUp={() => this.handleMouseUp()}
                         onMouseOut={() => this.handleMouseOut()}
@@ -423,6 +453,7 @@ class Board extends React.Component {
                             cancel={this.cancelSelection}
                             dispatch={this.dispatch}
                             selected={this.state.selected}
+                            delete={this.alive.clearArea}
                         />
                     }
 
