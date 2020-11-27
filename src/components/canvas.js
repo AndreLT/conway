@@ -90,7 +90,7 @@ function Canvas(ref, context, size, dimentions){
     this.ctx.globalAlpha = 1.0;
   }
 
-  this.inverseModel = (model) => {
+  this.mirrorModel = (model) => {
     let inverted = {};
     let size = Object.keys(model).length-1;
     let width = model["area"].x-1;

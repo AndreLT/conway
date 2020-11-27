@@ -35,7 +35,6 @@ class Board extends React.Component {
             size: 10,
             cursorcoord: { x: 0, y: 0 },
             fps: 300,
-            pattern: null,
             patternLegal: true,
             capturing: false,
             capturingCoordinates: null,
@@ -47,7 +46,7 @@ class Board extends React.Component {
             selected: null,
             ismobile: null,
             testoffset: null,
-            placing: { model: null, coord: null },
+            placing: { model: null, bounds: null },
             overModel: false,
         };
     }
@@ -105,21 +104,7 @@ class Board extends React.Component {
         let y = Math.floor(this.alive.bounds.y / 2)
         let centeredCoordinates = this.centerModel({ x: x, y: y }, model.area)
 
-        Object.assign(this.data, {
-            placing: {
-                model: model,
-                bounds: {
-                    start: centeredCoordinates,
-                    end: {
-                        x: centeredCoordinates.x + model.area.x,
-                        y: centeredCoordinates.y + model.area.y
-                    }
-                }
-            }
-        });
-
-        this.placeModel(centeredCoordinates, model, this.alive.bounds);
-        this.dispatch();
+        this.placeModel(centeredCoordinates, model);
     }
 
     //mouseX and mouseY are already scaled down to canvas coordinates
@@ -132,8 +117,8 @@ class Board extends React.Component {
 
     centerModel = (coordinates, area) => { return { x: coordinates.x - Math.ceil(area.x / 2), y: coordinates.y - Math.ceil(area.y / 2) } };
 
-    placeModel = (coordinates, model, bounds) => {
-        if(this.cursorCanvas.checkModelBound(coordinates, model, bounds)){
+    placeModel = (coordinates, model) => {
+        if(this.cursorCanvas.checkModelBound(coordinates, model, this.alive.bounds)){
             Object.assign(this.data, {
                 placing:{
                     model: model,
@@ -148,6 +133,8 @@ class Board extends React.Component {
             })
             this.cursorCanvas.drawModel(model, coordinates, "blue");
         }
+
+        this.dispatch();
     }
 
     toggleGrid = () => {
@@ -169,18 +156,25 @@ class Board extends React.Component {
 
         if (this.state.mouseDown) {
 
-            if (this.state.capturing)
+            if (this.state.capturing){
+
                 this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue");
+            } 
             else if(this.state.overModel){
                 let centeredCoord = this.centerModel(coordinates, this.state.placing.model.area);
-                this.placeModel(centeredCoord, this.state.placing.model, this.alive.bounds);
+
+                this.placeModel(centeredCoord, this.state.placing.model);
             }
             else
                 this.handleClick();
 
-        }else if(this.state.placing.model){
+        }
+        else if(this.state.placing.model){
+
             Object.assign(this.data, { overModel: this.mouseOverModel(coordinates.x, coordinates.y) });
-        }else{
+        }
+        else{
+
             if (this.state.selected) 
                 this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
             else
@@ -393,9 +387,16 @@ class Board extends React.Component {
     cancelSelection = () => {
        Object.assign(this.data, {
             selected: null,
-            capturingCoordinates: null
+            capturingCoordinates: null,
+            placing: { model: null, coord: null },
+            overModel: null,
         })
         this.cursorCanvas.clear();
+    }
+
+    roatateModel = (model) => {
+        let rotated = this.canvas.rotateModel(model)
+        this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(model))
     }
 
     componentDidMount() {
@@ -441,19 +442,19 @@ class Board extends React.Component {
 
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
 
-                    {this.state.selected &&
+                    {(this.state.selected || this.state.placing.model) &&
                         <Toolbar
-                            render={this.state.selected}
-                            capCoordinates={this.state.capturingCoordinates}
+                            render={this.state.selected ? this.state.selected : this.state.placing}
+                            coordinates={this.state.selected ? this.state.capturingCoordinates : this.state.placing.bounds}
                             size={this.state.size}
                             isMobile={this.state.ismobile}
-                            rotate={this.canvas.rotateModel}
-                            invert={this.canvas.inverseModel}
+                            rotate={() => this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(this.state.placing.model))}
+                            mirror={() => this.placeModel(this.state.placing.bounds.start, this.canvas.mirrorModel(this.state.placing.model))}
                             randomize={this.randomizeArea}
                             cancel={this.cancelSelection}
                             dispatch={this.dispatch}
-                            selected={this.state.selected}
                             delete={this.alive.clearArea}
+                            conceive={this.alive.conceiveModel}
                         />
                     }
 
