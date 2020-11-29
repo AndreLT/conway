@@ -54,7 +54,7 @@ function Canvas(ref, context, size, dimentions){
     this.clear();
     this.ctx.beginPath();
     this.ctx.rect(cursor.x*this.size, cursor.y*this.size, this.size, this.size);
-    this.ctx.strokeStyle = "red";
+    this.ctx.strokeStyle = "blue";
     this.ctx.stroke();
   }
 

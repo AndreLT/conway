@@ -95,8 +95,8 @@ class Board extends React.Component {
             this.stop();
         }
         this.canvas.draw(this.alive.generation);
-        Object.assign(this.data, { generation: this.state.generation + 1 });
-        this.dispatch();
+       // Object.assign(this.data, { generation: this.state.generation + 1 });
+        //this.dispatch();
     }
 
     handleModel = (model) => {
@@ -171,7 +171,7 @@ class Board extends React.Component {
         }
         else if(this.state.placing.model){
 
-            Object.assign(this.data, { overModel: this.mouseOverModel(coordinates.x, coordinates.y) });
+            this.setState({ overModel: this.mouseOverModel(coordinates.x, coordinates.y) });
         }
         else{
 
@@ -180,9 +180,10 @@ class Board extends React.Component {
             else
                 this.cursorCanvas.drawCursor(coordinates);
         }
-
-        Object.assign(this.data, { cursorcoord: coordinates });
-        this.dispatch();
+        if(this.state.cursorcoord.x !== coordinates.x || this.state.cursorcoord.y !== coordinates.y){
+            Object.assign(this.data, { cursorcoord: coordinates });
+            this.dispatch();
+        }
     }
 
     handleClick = () => {
@@ -388,14 +389,19 @@ class Board extends React.Component {
        Object.assign(this.data, {
             selected: null,
             capturingCoordinates: null,
-            placing: { model: null, coord: null },
-            overModel: null,
         })
         this.cursorCanvas.clear();
     }
 
+    cancelPlacement = () => {
+        Object.assign(this.data, {
+             placing: { model: null, coord: null },
+             overModel: null,
+         })
+         this.cursorCanvas.clear();
+     }
+
     roatateModel = (model) => {
-        let rotated = this.canvas.rotateModel(model)
         this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(model))
     }
 
@@ -418,7 +424,6 @@ class Board extends React.Component {
 
     render() {
         const isTutorial = this.state.tutorial && this.state.tutorial !== "skipped"
-
         return <div class="bg-transparent overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
             <div class="flex flex-row w-full h-full">
                 {isTutorial && this.renderTutorialArrow()}
@@ -451,7 +456,8 @@ class Board extends React.Component {
                             rotate={() => this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(this.state.placing.model))}
                             mirror={() => this.placeModel(this.state.placing.bounds.start, this.canvas.mirrorModel(this.state.placing.model))}
                             randomize={this.randomizeArea}
-                            cancel={this.cancelSelection}
+                            copy={() => this.handleModel(this.state.selected)}
+                            cancel={this.state.selected ? this.cancelSelection : this.cancelPlacement}
                             dispatch={this.dispatch}
                             delete={this.alive.clearArea}
                             conceive={this.alive.conceiveModel}

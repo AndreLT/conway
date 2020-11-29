@@ -91,15 +91,10 @@ const Toolbar = (props) => {
                 onClick={() => props.dispatch()}
             >
                 {generciButton(
-                    props.rotate, 
-                    <AiOutlineRotateRight size={props.isMobile ? 20 : 15} color="green" />
-                )}
-                {generciButton(
-                    props.invert, 
-                    <CgEditFlipH size={props.isMobile ? 20 : 15} color="green" />
-                )}
-                {generciButton(
-                    () => console.log('To be implemented'), 
+                    () => {
+                        props.cancel()
+                        props.copy()
+                    }, 
                     <FiCopy size={props.isMobile ? 20 : 15} color="green" />
                 )}
                 {generciButton(
