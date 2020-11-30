@@ -18,9 +18,11 @@ class Board extends React.Component {
         this.canvas = null; //initiated on component mount
         this.gridCanvas = null; //initiated on component mount
         this.cursorCanvas = null; //initiated on component mount
+        this.display = null; //initiated on component mount
         this.gridRef = React.createRef();
         this.boardRef = React.createRef();
         this.cursorRef = React.createRef();
+        this.displayRef = React.createRef();
         this.gun = require('../models/glider_gun.json');
         this.glider = require('../models/glider.json');
         this.megaglider = require('../models/mega_glider.json');
@@ -30,7 +32,6 @@ class Board extends React.Component {
         this.data = {};
 
         this.state = {
-            generation: 0,
             intervalid: null,
             size: 10,
             cursorcoord: { x: 0, y: 0 },
@@ -77,11 +78,17 @@ class Board extends React.Component {
     runtime = (speed) => {
         const id = window.setInterval(() => this.step(), speed);
         this.setState({ intervalid: id })
+        this.display.clear();
+        this.display.createBackground(false);
+        this.display.drawValues(this.alive.generation.size, (1000/this.state.fps).toFixed(2), false)
     }
 
     stop = () => {
         clearInterval(this.state.intervalid);
         this.setState({ intervalid: null })
+        this.display.clear();
+        this.display.createBackground(true);
+        this.display.drawValues(this.alive.generation.size, (1000/this.state.fps).toFixed(2), false)
     }
 
     speed = (news) => {
@@ -95,8 +102,7 @@ class Board extends React.Component {
             this.stop();
         }
         this.canvas.draw(this.alive.generation);
-       // Object.assign(this.data, { generation: this.state.generation + 1 });
-        //this.dispatch();
+        this.display.drawValues(this.alive.generation.size, (1000/this.state.fps).toFixed(2))
     }
 
     handleModel = (model) => {
@@ -207,43 +213,13 @@ class Board extends React.Component {
         this.stop();
         this.alive.killAll();
         this.canvas.clear();
-        this.setState({ generation: 0 })
+        this.display.reset();
+        this.display.drawValues(0,0);
     }
 
-    initCanvas() {
-        let height = this.alive.bounds.y * this.state.size;
-        let width = this.alive.bounds.x * this.state.size;
-        this.canvas.ctx.canvas.width = width;
-        this.canvas.ctx.canvas.height = height;
+    
 
-        this.gridCanvas.ctx.canvas.width = width;
-        this.gridCanvas.ctx.canvas.height = height;
-
-        this.cursorCanvas.ctx.canvas.width = width;
-        this.cursorCanvas.ctx.canvas.height = height;
-
-        this.gridCanvas.drawGrid();
-        this.cursorCanvas.drawCursor(this.state.cursorcoord);
-        this.canvas.draw(this.alive.generation);
-    }
-
-    canvasSetup() {
-        let canvasWidth = document.documentElement.clientWidth;
-        let canvasHeight = document.documentElement.clientHeight;
-
-        this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), 10, { width: canvasWidth, height: canvasHeight });
-        this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), 10, { width: canvasWidth, height: canvasHeight });
-        this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), 10, { width: canvasWidth, height: canvasHeight });
-
-        let width = Math.floor(canvasWidth / this.state.size);
-        let height = Math.floor(canvasHeight / this.state.size);
-        this.alive.bounds = { x: width, y: height };
-
-        if (this.alive.generation.size)
-            this.alive.removeOverBounds()
-
-        this.initCanvas();
-    }
+    
 
     handleMouseUp() {
         let newState = {};
@@ -405,16 +381,68 @@ class Board extends React.Component {
         this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(model))
     }
 
+    initCanvas() {
+        let height = this.alive.bounds.y * this.state.size;
+        let width = this.alive.bounds.x * this.state.size;
+
+        this.canvas.ctx.canvas.width = width;
+        this.canvas.ctx.canvas.height = height;
+
+        this.gridCanvas.ctx.canvas.width = width;
+        this.gridCanvas.ctx.canvas.height = height;
+
+        this.cursorCanvas.ctx.canvas.width = width;
+        this.cursorCanvas.ctx.canvas.height = height;
+
+        this.gridCanvas.drawGrid();
+        this.cursorCanvas.drawCursor(this.state.cursorcoord);
+        this.canvas.draw(this.alive.generation);
+    }
+
+    displaySetup() {
+        //Display dimentions will be calculated relative to 'ismobile' bool and tailwind's responsive attributes: lg:w-1/4 sm:w-1/2
+        let dimentions = {width:document.getElementById("display").width, height:150};
+        let clientWidth = document.documentElement.clientWidth;
+    
+
+        this.display = new Display(this.displayRef, this.displayRef.current.getContext('2d'), dimentions, window.devicePixelRatio)
+        this.display.createBackground();
+        this.display.drawValues(0,0);
+    }
+
+    canvasSetup() {
+        let canvasWidth = document.documentElement.clientWidth;
+        let canvasHeight = document.documentElement.clientHeight;
+
+        this.canvas = new Canvas(this.boardRef, this.boardRef.current.getContext('2d'), this.state.size, { width: canvasWidth, height: canvasHeight });
+        this.gridCanvas = new Canvas(this.gridRef, this.gridRef.current.getContext('2d'), this.state.size, { width: canvasWidth, height: canvasHeight });
+        this.cursorCanvas = new Canvas(this.cursorRef, this.cursorRef.current.getContext('2d'), this.state.size, { width: canvasWidth, height: canvasHeight });
+
+        let width = Math.floor(canvasWidth / this.state.size);
+        let height = Math.floor(canvasHeight / this.state.size);
+
+        this.alive.bounds = { x: width, y: height };
+
+        if (this.alive.generation.size)
+            this.alive.removeOverBounds()
+
+        this.initCanvas();
+    }
+
     componentDidMount() {
+
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
+            this.setState({ ismobile: navigator.userAgent })
+
         this.canvasSetup();
+        this.displaySetup();
+
         window.addEventListener('resize', () => this.canvasSetup());
+
         window.addEventListener('touchmove', function (event) {
             event.preventDefault();
             event.stopPropagation();
         }, { passive: false });
-
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
-            this.setState({ ismobile: navigator.userAgent })
 
     }
 
@@ -476,13 +504,8 @@ class Board extends React.Component {
 
                 <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
-                    <Display
-                        intervalid={this.state.intervalid}
-                        alive={this.alive.generation.size}
-                        generation={this.state.generation}
-                        speed={this.state.fps}
-                        cursor={this.state.cursorcoord}
-                    />
+                    <canvas id="display" ref={this.displayRef} class="w-11/12 flex flex-col p-3 rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
+                    
                     <div class="flex flex-col relative">
                         <div class="flex justify-between">
 

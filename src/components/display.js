@@ -1,42 +1,61 @@
 import React from 'react';
-import {FaPlay} from 'react-icons/fa';
 
-const Display = (props) => {
+function Display(ref, context, dimentions, pxRatio){
+    this.ref = ref;
+    this.ctx = context;
+    this.dimentions = dimentions;
+    this.generation = 0;
 
-    const speedDisplay = () => {
-        return <>
-            <FaPlay size={8} />
-            <FaPlay class={props.fps > 600 && 'opacity-20'} size={8} />
-            <FaPlay class={props.fps > 400 && 'opacity-20'} size={8} />
-            <FaPlay class={props.fps > 200 && 'opacity-20'} size={8} />
-            <FaPlay class={props.fps > 50 && 'opacity-20'} size={8} />
-        </>  
+    this.createBackground = (paused = true) => {
+        let normalizedSize = Math.floor(this.dimentions.height/8)
+        let ctx = this.ctx;
+
+        ctx.font = `bold ${normalizedSize}px Courier New, sans-serif`;
+
+        ctx.textAlign = "start";
+
+        ctx.globalAlpha = paused ? 0.4 : 1
+        ctx.fillText("Auto", 0, normalizedSize); 
+
+        ctx.textAlign = "end";
+
+        ctx.globalAlpha = paused ? 1 : 0.4
+        ctx.fillText("Paused", this.dimentions.width, normalizedSize);
+
+        ctx.globalAlpha = 1;
+        ctx.textAlign = "start"
+        ctx.fillText("Alive:", 0, normalizedSize*4);
+        ctx.fillText("Generation:", 0, normalizedSize*6);
+
+        ctx.fillText("Gen./s:", 0, normalizedSize*8)
     }
 
-    return <div class="w-11/12 flex flex-col rounded-md px-5 py-2 mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen">
-        <div class="flex justify-between">
-            <span class={!props.intervalid && "opacity-20"}>Auto</span>
-            <span class={props.intervalid && "opacity-20"}>Paused</span>
-        </div>
-        <div class="flex justify-between my-2 proportional-nums">
-            <span>Alive</span>
-            <span>{props.alive}</span>
-        </div>
-        <div class="flex justify-between my-2 proportional-nums">
-            <span>Generation</span>
-            <span>{props.generation}</span>
-        </div>
-        <div class="flex justify-between my-2 proportional-nums">
-            <div>
-                <span>Speed</span>
-                <div class="flex">{speedDisplay()}</div>
-            </div>
-            <div class="flex flex-col">
-                <span>{(1000/props.speed).toFixed(2)} Gen./s</span>
-                <span class="text-sm">{`x: ${props.cursor.x}, y: ${props.cursor.y}`}</span>
-            </div>
-        </div>
-    </div>
+    this.drawValues = (alive, speed, increaseGen=true) => {
+        let normalizedSize = Math.floor(this.dimentions.height/8)
+        let ctx = this.ctx;
+
+        ctx.clearRect(Math.floor(this.dimentions.width/2), normalizedSize*2, this.dimentions.width, this.dimentions.height)
+
+        ctx.font = `bold ${normalizedSize}px Courier New, sans-serif`;
+
+        ctx.textAlign = "end"
+
+        ctx.fillText(alive, this.dimentions.width, normalizedSize*4);
+        ctx.fillText((this.generation), this.dimentions.width, normalizedSize*6);
+
+        ctx.fillText(speed, this.dimentions.width, normalizedSize*8)
+        
+        if(increaseGen)
+            this.generation++;
+    }
+
+    this.clear = () => {
+        this.ctx.clearRect(0,0,this.dimentions.width, this.dimentions.height);
+    }
+
+    this.reset = () => {
+        this.generation = 0;
+    }
 };
 
 export default Display;
