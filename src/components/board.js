@@ -46,9 +46,10 @@ class Board extends React.Component {
             paused: false,
             selected: null,
             ismobile: null,
-            testoffset: null,
             placing: { model: null, bounds: null },
             overModel: false,
+            moving: false,
+            showToolbar: false,
         };
     }
 
@@ -58,10 +59,6 @@ class Board extends React.Component {
         this.setState({ ...updated })
         this.data = {};
         this.canvas.draw(this.alive.generation);
-    }
-
-    handleKeyPress(key) {
-        console.log(key)
     }
 
     randomize = () => {
@@ -106,7 +103,7 @@ class Board extends React.Component {
     }
 
     handleModel = (model) => {
-        let x = Math.floor((document.getElementById("control").getBoundingClientRect().x / this.state.size) / 2)
+        let x = Math.floor(this.state.ismobile ? (this.alive.bounds.x / 2) : (document.getElementById("control").getBoundingClientRect().x / this.state.size) / 2)
         let y = Math.floor(this.alive.bounds.y / 2)
         let centeredCoordinates = this.centerModel({ x: x, y: y }, model.area)
 
@@ -135,7 +132,8 @@ class Board extends React.Component {
                             y: coordinates.y+model.area.y
                         }
                     }
-                }
+                },
+                showToolbar: this.state.moving ? false : true,
             })
             this.cursorCanvas.drawModel(model, coordinates, "blue");
         }
@@ -166,7 +164,7 @@ class Board extends React.Component {
 
                 this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue");
             } 
-            else if(this.state.overModel){
+            else if(this.state.moving){
                 let centeredCoord = this.centerModel(coordinates, this.state.placing.model.area);
 
                 this.placeModel(centeredCoord, this.state.placing.model);
@@ -219,10 +217,6 @@ class Board extends React.Component {
         this.display.drawValues(0,0);
     }
 
-    
-
-    
-
     handleMouseUp() {
         let newState = {};
         const capture = (start, end) => {
@@ -254,7 +248,7 @@ class Board extends React.Component {
             let start = { x: Math.min(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.min(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
             let end = { x: Math.max(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.max(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
             let captured = capture(start, end);
-            Object.assign(newState, { selected: captured, capturing: false, capturingCoordinates: { start: start, end: end } })
+            Object.assign(newState, { selected: captured, showToolbar: true, capturing: false, capturingCoordinates: { start: start, end: end } })
         }
 
         if (this.state.paused) {
@@ -262,14 +256,26 @@ class Board extends React.Component {
             Object.assign(newState, { paused: false })
         }
 
+        if(this.state.moving){
+            Object.assign(newState, { moving: false, showToolbar: true })
+        }
+
         this.setState({ mouseDown: false, ...newState })
     }
 
     handleTouchCoord(clientX, clientY) {
+        let newState = {};
+
         let scaledX = Math.floor(clientX / this.state.size);
         let scaledY = Math.floor(clientY / this.state.size);
+        
+        if(this.state.placing.model){
+            let overModel = this.mouseOverModel(scaledX, scaledY)
 
-        this.setState({ cursor: { x: scaledX, y: scaledY } });
+            Object.assign(newState, {moving: overModel, overModel: overModel})
+        }
+
+        this.setState({ cursorcoord: { x: scaledX, y: scaledY }, ...newState});
         this.handleMouseDown({ x: scaledX, y: scaledY });
     }
 
@@ -278,9 +284,13 @@ class Board extends React.Component {
             this.setState({ paused: true })
             this.stop();
         }
+
         if (this.state.capturing)
             this.setState({ capturingCoordinates: { start: coordinates, end: null } })
 
+        if(this.state.overModel)
+            this.setState({ moving: true, showToolbar: false})
+        
         this.setState({ mouseDown: true })
     }
 
@@ -289,11 +299,6 @@ class Board extends React.Component {
             this.handleMouseUp();
         else
             this.setState({ mouseDown: false })
-    }
-
-    handleTouch(model) {
-        Object.assign(this.data, { menuOut: true })
-        this.handleModel(model)
     }
 
     handleTutorial() {
@@ -366,6 +371,7 @@ class Board extends React.Component {
     cancelSelection = () => {
        Object.assign(this.data, {
             selected: null,
+            showToolbar: false,
             capturingCoordinates: null,
         })
         this.cursorCanvas.clear();
@@ -374,6 +380,7 @@ class Board extends React.Component {
     cancelPlacement = () => {
         Object.assign(this.data, {
              placing: { model: null, coord: null },
+             showToolbar: false,
              overModel: null,
          })
          this.cursorCanvas.clear();
@@ -446,11 +453,13 @@ class Board extends React.Component {
         this.canvasSetup();
         this.displaySetup();
 
-        window.addEventListener('resize', () => this.canvasSetup());
+        window.addEventListener('resize', () => {
+            this.canvasSetup();
+            this.displaySetup();
+        });
 
-        window.addEventListener('touchmove', function (event) {
+        document.getElementById('cursor').addEventListener('touchmove', function (event) {
             event.preventDefault();
-            event.stopPropagation();
         }, { passive: false });
 
     }
@@ -461,7 +470,7 @@ class Board extends React.Component {
 
     render() {
         const isTutorial = this.state.tutorial && this.state.tutorial !== "skipped"
-        return <div class="bg-transparent overflow-hidden relative flex h-full w-full" onKeyDown={(e) => this.handleKeyPress(e.key)}>
+        return <div class="bg-transparent overflow-x-hidden relative flex h-full w-full">
             <div class="flex flex-row w-full h-full">
                 {isTutorial && this.renderTutorialArrow()}
                 <div class="flex justify-center align-center w-full h-full z-0 m-auto bg-gray-200" tabIndex="-1">
@@ -484,7 +493,7 @@ class Board extends React.Component {
 
                     <canvas id="grid" class={"bg-transparent"} ref={this.gridRef} />
 
-                    {(this.state.selected || this.state.placing.model) &&
+                    {(this.state.showToolbar) &&
                         <Toolbar
                             render={this.state.selected ? this.state.selected : this.state.placing}
                             coordinates={this.state.selected ? this.state.capturingCoordinates : this.state.placing.bounds}
@@ -511,7 +520,7 @@ class Board extends React.Component {
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
                     <div class="flex flex-col relative">
                         <canvas id="display" ref={this.displayRef} class="w-11/12 h-32 flex flex-col rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
@@ -570,7 +579,7 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
-                        <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md overflow-y-scroll overflow-x-hidden bg-gray-200">
+                        <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md scrolling-touch overflow-x-hidden bg-gray-200">
                             <button id="rpentomino" onClick={() => this.handleModel(this.rpentomino)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 z-40 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>R-Pentomino</button>
                             <PatternButton onClick={() => this.handleModel(this.gun)}>Glider Gun</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.glider)}>Glider</PatternButton>

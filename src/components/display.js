@@ -43,7 +43,6 @@ function Display(ref, context, dimentions){
         let ctx = this.ctx;
         
         let normalizedSize = Math.floor(this.dimentions.height/8)
-        let vspacing = Math.floor(normalizedSize/2)
 
         ctx.clearRect(Math.floor(this.dimentions.width/2), normalizedSize*2, this.dimentions.width, normalizedSize*6)
 
