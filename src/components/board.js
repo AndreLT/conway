@@ -183,8 +183,10 @@ class Board extends React.Component {
 
             if (this.state.selected) 
                 this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, this.state.capturingCoordinates.end, "green")
-            else
+            else{
                 this.cursorCanvas.drawCursor(coordinates);
+                this.display.drawCoordinates(coordinates)
+            }
         }
         if(this.state.cursorcoord.x !== coordinates.x || this.state.cursorcoord.y !== coordinates.y){
             Object.assign(this.data, { cursorcoord: coordinates });
@@ -401,13 +403,20 @@ class Board extends React.Component {
 
     displaySetup() {
         //Display dimentions will be calculated relative to 'ismobile' bool and tailwind's responsive attributes: lg:w-1/4 sm:w-1/2
-        let dimentions = {width:document.getElementById("display").width, height:150};
-        let clientWidth = document.documentElement.clientWidth;
-    
+        
+        let ctx = this.displayRef.current.getContext('2d');
+        
+        let displayCanvas = document.getElementById('display')
+  
+        let dimentions = {width:displayCanvas.clientWidth*window.devicePixelRatio, height:displayCanvas.clientHeight*window.devicePixelRatio};
+        
+        displayCanvas.setAttribute('width', dimentions.width)
+        displayCanvas.setAttribute('height', dimentions.height)
 
-        this.display = new Display(this.displayRef, this.displayRef.current.getContext('2d'), dimentions, window.devicePixelRatio)
+        this.display = new Display(this.displayRef, ctx, dimentions)
         this.display.createBackground();
         this.display.drawValues(0,0);
+        this.display.drawCoordinates({x:0, y:0})
     }
 
     canvasSetup() {
@@ -504,9 +513,8 @@ class Board extends React.Component {
 
                 <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-x-none overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
-                    <canvas id="display" ref={this.displayRef} class="w-11/12 flex flex-col p-3 rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
-                    
                     <div class="flex flex-col relative">
+                        <canvas id="display" ref={this.displayRef} class="w-11/12 h-32 flex flex-col rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
                         <div class="flex justify-between">
 
                             <button
