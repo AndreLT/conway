@@ -7,9 +7,10 @@ import { GiSaveArrow } from 'react-icons/gi';
 
 const Toolbar = (props) => {
 
-    let generciButton = (method, icon) => {
+    let generciButton = (method, icon, id=null) => {
         return (
             <button
+                id= {id}
                 class={`flex rounded-md ${props.isMobile ? 'p-4' : 'p-2'} m-1 bg-gray-100`}
                 onClick={() => method()}
             >
@@ -43,7 +44,8 @@ const Toolbar = (props) => {
                             props.conceive(props.render.model, props.coordinates.start);
                             props.cancel();
                         }, 
-                        <AiOutlineCheck size={props.isMobile ? 20 : 15} color="green" />
+                        <AiOutlineCheck size={props.isMobile ? 20 : 15} color="green" />,
+                        "conceive"
                     )}
                     {generciButton(
                         () => {

@@ -1,6 +1,3 @@
-import React from 'react';
-import { CgIcecream } from 'react-icons/cg';
-
 function Display(ref, context, dimentions){
     this.ref = ref;
     this.ctx = context;
@@ -16,23 +13,24 @@ function Display(ref, context, dimentions){
         let ctx = this.ctx;
         
         let normalizedSize = Math.floor(this.dimentions.height/8)
-        let vspacing = Math.floor(normalizedSize/2)
 
-        ctx.font = `bold ${normalizedSize}px sans-serif`;
+        ctx.font = `small-caps bold ${normalizedSize}px sans-serif`;
+
+        ctx.fillStyle = '#303323'
 
         ctx.textAlign = "start";
 
-        ctx.globalAlpha = paused ? 0.4 : .85
+        ctx.globalAlpha = paused ? 0.4 : 1
         this.fillTextWithPadding("Auto", 0, normalizedSize); 
 
         ctx.textAlign = "end";
 
-        ctx.globalAlpha = paused ? .85 : 0.4
+        ctx.globalAlpha = paused ? 1 : 0.4
         this.fillTextWithPadding("Paused", this.dimentions.width, normalizedSize);
 
-        ctx.font = `bold ${Math.floor(normalizedSize*0.8)}px sans-serif`;
+        ctx.font = `small-caps bold ${Math.floor(normalizedSize*0.8)}px sans-serif`;
 
-        ctx.globalAlpha = .85;
+        ctx.globalAlpha = 1;
         ctx.textAlign = "start"
         this.fillTextWithPadding("Alive:", 0, (normalizedSize*3));
         this.fillTextWithPadding("Generation:", 0, (normalizedSize*4));

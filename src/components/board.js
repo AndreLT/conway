@@ -6,8 +6,9 @@ import { MdSelectAll } from 'react-icons/md';
 import Canvas from './canvas';
 import Alive from './alive';
 import Display from './display';
-import PatternButton from './partternbutton'
-import Toolbar from './toolbar'
+import PatternButton from './partternbutton';
+import Toolbar from './toolbar';
+import Tutorial from './tutorial';
 
 
 class Board extends React.Component {
@@ -19,6 +20,7 @@ class Board extends React.Component {
         this.gridCanvas = null; //initiated on component mount
         this.cursorCanvas = null; //initiated on component mount
         this.display = null; //initiated on component mount
+        this.tutorial = null; //initiated on component mount
         this.gridRef = React.createRef();
         this.boardRef = React.createRef();
         this.cursorRef = React.createRef();
@@ -30,7 +32,8 @@ class Board extends React.Component {
         this.rpentomino = require('../models/r_pentomino.json');
         this.ap11 = require('../models/achims_p11.json')
         this.data = {};
-
+        this.isLandscape = window.innerHeight < window.innerWidth;
+        
         this.state = {
             intervalid: null,
             size: 10,
@@ -336,36 +339,15 @@ class Board extends React.Component {
         }
     }
 
-    setupTutorial() {
-        let menub = document.getElementById("menu")
-        menub.addEventListener('click', (e) => this.handleTutorial(e));
-        this.setState({ tutorial: "menu" });
+    toggleMenu(state) {
+        this.setState({menuOut: state})
     }
 
-    renderTutorialArrow() {
-        console.log(this.state.tutorial)
-        let position = document.getElementById(this.state.tutorial).getBoundingClientRect();
-        const steps = {
-            "menu":
-                <div style={{ position: "absolute", display: "flex", alignItems: "center", left: position.left + 100, top: position.top, zIndex: 60 }}>
-                    <FaArrowLeft class="animate-bounce" size={35} />
-                    <span class="ml-10 text-lg font-mono">Start by opening the menu</span>
-                </div>,
-            "rpentomino":
-                <div style={{ position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 60 }}>
-                    <span class="mr-10 text-lg font-mono w-30">Now select the R-Pentonimo pattern from the menu</span>
-                    <FaArrowRight class="animate-bounce" size={35} />
-                </div>,
-            "cursor":
-                <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 60 }}>Place your pattern anywere on the board</span>,
-            "play":
-                <div style={{ position: "absolute", display: "flex", right: position.width * 3, top: position.top, zIndex: 60 }}>
-                    <span class="mr-10 text-lg font-mono w-30">Press play and see what happens!</span>
-                    <FaArrowRight class="animate-bounce" size={35} />
-                </div>,
-        }
+    setupTutorial() {
 
-        return steps[this.state.tutorial]
+        document.getElementById("menu").addEventListener('click', () => this.tutorial.stateHandler())
+
+        this.setState({ tutorial: true });
     }
 
     cancelSelection = () => {
@@ -385,6 +367,8 @@ class Board extends React.Component {
          })
          this.cursorCanvas.clear();
      }
+
+    isTutorial = () => (this.state.tutorial && this.tutorial.step !== null)
 
     roatateModel = (model) => {
         this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(model))
@@ -452,13 +436,14 @@ class Board extends React.Component {
 
         this.canvasSetup();
         this.displaySetup();
+        this.tutorial = new Tutorial(() => this.toggleMenu, () => this.endTutorial);
 
         window.addEventListener('resize', () => {
             this.canvasSetup();
             this.displaySetup();
         });
 
-        document.getElementById('cursor').addEventListener('touchmove', function (event) {
+        document.getElementById('cursor').addEventListener('touchmove', (event) => {
             event.preventDefault();
         }, { passive: false });
 
@@ -469,12 +454,11 @@ class Board extends React.Component {
     }
 
     render() {
-        const isTutorial = this.state.tutorial && this.state.tutorial !== "skipped"
         return <div class="bg-transparent overflow-x-hidden relative flex h-full w-full">
             <div class="flex flex-row w-full h-full">
-                {isTutorial && this.renderTutorialArrow()}
+                {this.isTutorial() && this.tutorial.renderTutorial()}
                 <div class="flex justify-center align-center w-full h-full z-0 m-auto bg-gray-200" tabIndex="-1">
-                    {isTutorial && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.6)" }} />}
+                    {this.isTutorial() && !(this.tutorial.step === "placement") && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.6)" }} />}
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
 
                     <canvas
@@ -520,8 +504,8 @@ class Board extends React.Component {
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div id="control" class={`flex flex-col lg:w-3/12 sm:w-3/6 h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
-                    {this.state.tutorial && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
+                <div id="control" class={`flex flex-col ${((this.state.ismobile === null) || this.isLandscape) ? 'w-3/12' : 'w-5/6'} h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
+                    {this.isTutorial() && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
                     <div class="flex flex-col relative">
                         <canvas id="display" ref={this.displayRef} class="w-11/12 h-32 flex flex-col rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
                         <div class="flex justify-between">
@@ -580,7 +564,7 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
                         <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md scrolling-touch overflow-x-hidden bg-gray-200">
-                            <button id="rpentomino" onClick={() => this.handleModel(this.rpentomino)} class={`transition duration-300 ease-in-out bg-gray-100 rounded-sm px-5 py-2 mx-2 my-1 z-40 shadow-popup transform focus:scale-95 focus:shadow-popdown focus:outline-none`}>R-Pentomino</button>
+                            <PatternButton id="rpentomino" onClick={() => this.handleModel(this.rpentomino)}>R-Pentomino</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.gun)}>Glider Gun</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.glider)}>Glider</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.megaglider)}>Mega Glider</PatternButton>
@@ -608,7 +592,7 @@ class Board extends React.Component {
                         </p>
                         <div class="flex flex-row mx-auto w-4/6 justify-between">
                             <button onClick={() => this.setupTutorial()} class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none">How to Play</button>
-                            <button onClick={() => this.setState({ tutorial: false })} class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
+                            <button onClick={() => this.setState({ tutorial: false, menuOut: false })} class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none">Skip Tutorial</button>
                         </div>
                     </div>
                 </div>
