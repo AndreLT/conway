@@ -32,7 +32,6 @@ class Board extends React.Component {
         this.rpentomino = require('../models/r_pentomino.json');
         this.ap11 = require('../models/achims_p11.json')
         this.data = {};
-        this.isLandscape = window.innerHeight < window.innerWidth;
         
         this.state = {
             intervalid: null,
@@ -53,6 +52,7 @@ class Board extends React.Component {
             overModel: false,
             moving: false,
             showToolbar: false,
+            tutorialStep: 0,
         };
     }
 
@@ -164,8 +164,10 @@ class Board extends React.Component {
         if (this.state.mouseDown) {
 
             if (this.state.capturing){
+                let start = { x: Math.min(this.state.capturingCoordinates.start.x, coordinates.x), y: Math.min(this.state.capturingCoordinates.start.y, coordinates.y) };
+                let end = { x: Math.max(this.state.capturingCoordinates.start.x, coordinates.x), y: Math.max(this.state.capturingCoordinates.start.y, coordinates.y) };
 
-                this.cursorCanvas.drawCaptureArea(this.state.capturingCoordinates.start, coordinates, "blue");
+                this.cursorCanvas.drawCaptureArea(start, end, "blue");
             } 
             else if(this.state.moving){
                 let centeredCoord = this.centerModel(coordinates, this.state.placing.model.area);
@@ -220,7 +222,7 @@ class Board extends React.Component {
         this.display.drawValues(0,0);
     }
 
-    handleMouseUp() {
+    handleMouseUp(clientX, clientY) {
         let newState = {};
         const capture = (start, end) => {
             const area = { x: 0, y: 0 }
@@ -243,13 +245,19 @@ class Board extends React.Component {
                     }
                 }
             }
+
             blueprint['area'] = { x: area.x + 1, y: area.y + 1 };
+
             return (blueprint);
         }
 
         if (this.state.capturing) {
-            let start = { x: Math.min(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.min(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
-            let end = { x: Math.max(this.state.capturingCoordinates.start.x, this.state.cursorcoord.x), y: Math.max(this.state.capturingCoordinates.start.y, this.state.cursorcoord.y) };
+            let scaledX = Math.floor(clientX / this.state.size)
+            let scaledY = Math.floor(clientY / this.state.size)
+
+            let coordinates = { x: scaledX, y: scaledY }
+            let start = { x: Math.min(this.state.capturingCoordinates.start.x, coordinates.x), y: Math.min(this.state.capturingCoordinates.start.y, coordinates.y) };
+            let end = { x: Math.max(this.state.capturingCoordinates.start.x, coordinates.x), y: Math.max(this.state.capturingCoordinates.start.y, coordinates.y) };
             let captured = capture(start, end);
             Object.assign(newState, { selected: captured, showToolbar: true, capturing: false, capturingCoordinates: { start: start, end: end } })
         }
@@ -339,14 +347,33 @@ class Board extends React.Component {
         }
     }
 
+    cutSelection() {
+        let capturingStart = this.state.capturingCoordinates.start;
+        let capturingEnd = this.state.capturingCoordinates.end;
+        let selected = this.state.selected
+
+        if(this.cursorCanvas.checkModelBound(capturingStart, selected, this.alive.bounds)){
+            Object.assign(this.data, {
+                placing:{
+                    model: selected,
+                    bounds: {
+                        start: {x: capturingStart.x - 1, y: capturingStart.y - 1},
+                        end: {x: capturingEnd.x - 1, y: capturingEnd.y - 1},
+                    }
+                },
+                selected: null,
+            })
+            this.cursorCanvas.drawModel(selected, this.data.placing.bounds.start, "blue");
+        }
+        this.dispatch();
+        this.alive.clearArea(this.state.capturingCoordinates)
+    }
+
     toggleMenu(state) {
         this.setState({menuOut: state})
     }
 
     setupTutorial() {
-
-        document.getElementById("menu").addEventListener('click', () => this.tutorial.stateHandler())
-
         this.setState({ tutorial: true });
     }
 
@@ -367,8 +394,6 @@ class Board extends React.Component {
          })
          this.cursorCanvas.clear();
      }
-
-    isTutorial = () => (this.state.tutorial && this.tutorial.step !== null)
 
     roatateModel = (model) => {
         this.placeModel(this.state.placing.bounds.start, this.canvas.rotateModel(model))
@@ -436,7 +461,6 @@ class Board extends React.Component {
 
         this.canvasSetup();
         this.displaySetup();
-        this.tutorial = new Tutorial(() => this.toggleMenu, () => this.endTutorial);
 
         window.addEventListener('resize', () => {
             this.canvasSetup();
@@ -456,9 +480,17 @@ class Board extends React.Component {
     render() {
         return <div class="bg-transparent overflow-x-hidden relative flex h-full w-full">
             <div class="flex flex-row w-full h-full">
-                {this.isTutorial() && this.tutorial.renderTutorial()}
-                <div class="flex justify-center align-center w-full h-full z-0 m-auto bg-gray-200" tabIndex="-1">
-                    {this.isTutorial() && !(this.tutorial.step === "placement") && <span style={{ position: "absolute", width: "100%", height: "100%", zIndex: 20, backgroundColor: "rgba(135,135,135,.6)" }} />}
+                {this.state.tutorial && 
+                    <span id="tutorialmask" onClick={()=> this.setState({tutorialStep: this.state.tutorialStep+1})} style={{ position: "absolute", width: "100%", height: "100%", zIndex: 30}}>
+                        <Tutorial 
+                            step={this.state.tutorialStep}
+                            menuOut={(state) => this.toggleMenu(state)}
+                            isMenuOut={this.state.menuOut}
+                            endTutorial={() => this.setState({tutorial: false})}
+                        />
+                    </span>
+                }
+                <div class="flex justify-center align-center w-full h-full m-auto bg-gray-200" tabIndex="-1">
                     <canvas id="board" class={"bg-transparent m-auto absolute"} ref={this.boardRef} />
 
                     <canvas
@@ -470,7 +502,7 @@ class Board extends React.Component {
                         onTouchMove={(e) => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)}
                         onMouseMove={(e) => this.handleMouseMove(e.clientX, e.clientY)}
                         onMouseDown={() => this.handleMouseDown(this.state.cursorcoord)}
-                        onMouseUp={() => this.handleMouseUp()}
+                        onMouseUp={(e) => this.handleMouseUp(e.clientX, e.clientY)}
                         onMouseOut={() => this.handleMouseOut()}
                         onClick={() => this.handleClick()}
                     />
@@ -491,6 +523,7 @@ class Board extends React.Component {
                             dispatch={this.dispatch}
                             delete={this.alive.clearArea}
                             conceive={this.alive.conceiveModel}
+                            cut={() => this.cutSelection()}
                         />
                     }
 
@@ -498,17 +531,16 @@ class Board extends React.Component {
 
                 <button
                     id="menu"
-                    class="absolute flex transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-40 focus:outline-none hover:bg-white"
+                    class="absolute flex transition duration-300 ease-in-out rounded-md m-2 shadow-md bg-gray-300 px-4 py-2 z-10 focus:outline-none hover:bg-white"
                     onClick={() => this.setState({ menuOut: !this.state.menuOut })}
                 >
                     <FaEquals size="20px" color={"#aaa"} />
                 </button>
 
-                <div id="control" class={`flex flex-col ${((this.state.ismobile === null) || this.isLandscape) ? 'w-3/12' : 'w-5/6'} h-full bg-gray-200 shadow-xl z-20 right-0 absolute overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
-                    {this.isTutorial() && <span id="controlmask" style={{ position: "absolute", width: "100%", height: "100%", zIndex: 31, backgroundColor: "rgba(135,135,135,.6)" }} class="w-full h-full absolute left-0 bg-gray-300 bg-opacity-75" />}
+                <div id="control" class={`flex flex-col ${(this.state.ismobile === null) ? 'w-3/12' : (window.innerHeight < window.innerWidth) ? 'w-3/6' : 'w-5/6'} h-full bg-gray-200 shadow-xl right-0 absolute overflow-y-auto px-4 transform transition ease-in-out duration-500 sm:duration-700 ${this.state.menuOut ? 'translate-x-full' : 'translate-x-0'}`}>
                     <div class="flex flex-col relative">
                         <canvas id="display" ref={this.displayRef} class="w-11/12 h-32 flex flex-col rounded-md mt-8 mx-auto bg-retro border-solid border-4 border-white opacity-80 text-opacity-75 font-semibold font-mono text-sm shadow-screen"/>
-                        <div class="flex justify-between">
+                        <div id="maincontrols" class="flex justify-between">
 
                             <button
                                 class={`transition duration-300 ease-in-out border-4 border-transparent rounded-full m-auto p-5 my-8 shadow-resting focus:shadow-button focus:outline-none`}
@@ -522,7 +554,6 @@ class Board extends React.Component {
                             </button>
 
                             <button
-                                id="play"
                                 class={`transition duration-300 ease-in-out border-4 border-transparent bg-gray-200 rounded-full m-auto p-5 my-8 focus:outline-none ${this.state.intervalid ? 'shadow-button' : 'shadow-resting'}`}
                                 onClick={() => {
                                     if (this.state.selected)
@@ -542,7 +573,7 @@ class Board extends React.Component {
                             </button>
 
                         </div>
-                        <div class="flex justify-between p-4">
+                        <div id="speed" class="flex justify-between p-4">
                             <button class="my-auto" onClick={() => this.speed(this.state.fps + 50)} disabled={this.state.fps >= 600}><FaBackward /></button>
                             <div class="h-10 px-2 rounded-full shadow-neuinner w-4/5 bg-gray-200">
                                 <div class={`transition-width h-6 w-${(650 - this.state.fps) / 50}/12 mt-2 bg-gray-100 rounded-full`}></div>
@@ -564,7 +595,7 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
                         </div>
                         <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md scrolling-touch overflow-x-hidden bg-gray-200">
-                            <PatternButton id="rpentomino" onClick={() => this.handleModel(this.rpentomino)}>R-Pentomino</PatternButton>
+                            <PatternButton onClick={() => this.handleModel(this.rpentomino)}>R-Pentomino</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.gun)}>Glider Gun</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.glider)}>Glider</PatternButton>
                             <PatternButton onClick={() => this.handleModel(this.megaglider)}>Mega Glider</PatternButton>

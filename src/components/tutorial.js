@@ -1,98 +1,63 @@
 import React from 'react';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa'
 
-function Tutorial(menuOut) {
-    this.step = "menu";
-    this.disabledButtons = [];
-    this.addListener = (id) => {
-        let element = document.getElementById(id)
-        element.addEventListener('click', () => this.stateHandler())
-        element.disabled = false;
-    };
-    this.removeListener = (id) => {
-        let element = document.getElementById(id)
+const Tutorial = (props) => {
+    const stepids = ["menu", "patterns", "maincontrols", "speed", null]
+    const position = (id) => document.getElementById(id).getBoundingClientRect();
 
-        element.removeEventListener('click', () => this.stateHandler())
-        this.disabledButtons.push(id)
-        element.disabled = true;
-    };
+    let stepid = stepids[props.step]
+    let tutorialStep;
+    let pos;
 
-    this.renderTutorial = () => {
-        let position = (this.step === "placement" || this.step === null) ? null : document.getElementById(this.step).getBoundingClientRect();
-        let tutorialStep;
+    switch (stepid) {
+        case "menu":
+            pos = position("menu");
+            tutorialStep = (
+                <div style={{ position: "absolute", display: "flex", alignItems: "center", left: pos.left + 100, top: pos.top, zIndex: 60 }}>
+                    <FaArrowLeft class="animate-bounce" size={35} />
+                    <span class="ml-10 lg:text-lg md:text-md text-sm font-mono">You can access the menu by clicking here</span>
+                </div>
+            )
+            break;
 
-        switch (this.step) {
-            case "menu":
-                tutorialStep = (
-                    <div style={{ position: "absolute", display: "flex", alignItems: "center", left: position.left + 100, top: position.top, zIndex: 60 }}>
-                        <FaArrowLeft class="animate-bounce" size={35} />
-                        <span class="ml-10 text-lg font-mono">Start by opening the menu</span>
-                    </div>
-                )
-                break;
+        case "patterns":
+            if(props.isMenuOut)
+                props.menuOut(false);
+            pos = position("patterns");
+            document.getElementById("control").scrollTo(0, pos.top)
+            pos = position("patterns");
+            tutorialStep = (
+                <div style={{ position: "absolute", display: "flex", right: pos.width, top: pos.top + 50, zIndex: 60 }}>
+                    <span class="mr-10 text-lg font-mono w-30">Here is a list of patterns you can choose from.</span>
+                    <FaArrowRight class="animate-bounce" size={35} />
+                </div>
+            )
+            break;
 
-            case "rpentomino":
-                tutorialStep = (
-                    <div style={{ position: "absolute", display: "flex", right: position.width, top: position.top, zIndex: 60 }}>
-                        <span class="mr-10 text-lg font-mono w-30">Now select the R-Pentonimo pattern from the menu</span>
-                        <FaArrowRight class="animate-bounce" size={35} />
-                    </div>
-                )
-                break;
+        case "maincontrols":
+            document.getElementById("control").scrollTo(0,0)
+            pos = position("maincontrols");
+            tutorialStep =( 
+                <div style={{ position: "absolute", display: "flex",  right: pos.width, top: pos.top+50, zIndex: 60 }}>
+                    <span class="mr-10 text-lg font-mono w-30">These are the simulation's main controls.<br/> You can Step, Play and Pause your simulation.</span>
+                    <FaArrowRight class="animate-bounce" size={35} />
+                </div>
+            )
+            break;
 
-            case "placement":
-                tutorialStep = <span style={{ position: "absolute", display: "flex", left: "50%", top: "30px", zIndex: 60 }}>Place your pattern anywere on the board</span>
-                break;
-
-            case "play":
-                tutorialStep = (
-                    <div style={{ position: "absolute", display: "flex", right: position.width * 3, top: position.top, zIndex: 60 }}>
-                        <span class="mr-10 text-lg font-mono w-30">Press play and see what happens!</span>
-                        <FaArrowRight class="animate-bounce" size={35} />
-                    </div>
-                )
-                break;
-        }
-        return <span>{tutorialStep}</span>
+        case "speed":
+            pos = position("speed");
+            tutorialStep = (
+                <div style={{ position: "absolute", display: "flex", right: pos.width, top: pos.top+10, zIndex: 60 }}>
+                    <span class="mr-10 text-lg font-mono w-30">And here you can change the speed</span>
+                    <FaArrowRight class="animate-bounce" size={35} />
+                </div>
+            )
+            break;
+        default:
+            props.endTutorial();
     }
-
-
-    this.stateHandler = () => {
-        switch (this.step) {
-            case "menu":
-                this.removeListener("menu");
-                this.addListener("rpentomino");
-                document.getElementById("rpentomino").style.zIndex = 40
-                document.querySelector("button").disabled = true;
-                this.step = "rpentomino"
-                break;
-            case "rpentomino":
-                this.removeListener("rpentomino");
-                this.addListener("cursor");
-                this.step = "placement";
-                menuOut(true);
-                break;
-            case "placement":
-                this.removeListener("cursor");
-                this.addListener("play");
-                document.getElementById("play").style.zIndex = 40
-                this.step = "play";
-                menuOut(false);
-                break;
-            case "play":
-                this.removeListener("play")
-                this.step = null;
-                for (let buttonI in this.disabledButtons) {
-                    document.getElementById(this.disabledButtons[buttonI]).disabled = false;
-                }
-                break;
-        }
-
-        this.renderTutorial();
-
-
-
-    }
+    return <span>{tutorialStep}</span>
 
 }
 

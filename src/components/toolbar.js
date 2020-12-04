@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaDiceD6 } from 'react-icons/fa';
+import { FaDiceD6, FaCut } from 'react-icons/fa';
 import { AiOutlineCloseSquare, AiOutlineRotateRight, AiOutlineDelete, AiOutlineCheck} from 'react-icons/ai';
 import { CgEditFlipH } from 'react-icons/cg'
 import { FiCopy } from 'react-icons/fi';
@@ -39,14 +39,16 @@ const Toolbar = (props) => {
                     }}
                     onClick={() => props.dispatch()}
                 >
-                    {generciButton(
-                        () => {
+                    <button
+                        id="check"
+                        class={`flex rounded-md ${props.isMobile ? 'p-4' : 'p-2'} m-1 bg-gray-100`}
+                        onClick={() => {
                             props.conceive(props.render.model, props.coordinates.start);
                             props.cancel();
-                        }, 
-                        <AiOutlineCheck size={props.isMobile ? 20 : 15} color="green" />,
-                        "conceive"
-                    )}
+                        }}
+                    >
+                        <AiOutlineCheck size={props.isMobile ? 20 : 15} color="green" />
+                    </button>
                     {generciButton(
                         () => {
                             props.cancel();
@@ -94,10 +96,21 @@ const Toolbar = (props) => {
             >
                 {generciButton(
                     () => {
-                        props.cancel()
-                        props.copy()
+                        if(Object.keys(props.render).length > 1){
+                            props.cancel()
+                            props.copy()
+                        }
                     }, 
-                    <FiCopy size={props.isMobile ? 20 : 15} color="green" />
+                    <FiCopy size={props.isMobile ? 20 : 15} color="green" />,
+                )}
+                {generciButton(
+                    () => {
+                        if(Object.keys(props.render).length > 1){
+                            props.cut();
+                            props.dispatch();
+                        }
+                    },
+                    <FaCut size={props.isMobile ? 20 : 15} color="purple" />
                 )}
                 {generciButton(
                     () => console.log(props.render), 

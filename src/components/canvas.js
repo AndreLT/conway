@@ -24,7 +24,7 @@ function Canvas(ref, context, size, dimentions){
     this.ctx.beginPath();
     this.ctx.fillStyle = color;
     this.ctx.globalAlpha = 0.3;
-    this.ctx.rect(capture.x*this.size, capture.y*this.size, (cursor.x - capture.x)*this.size,(cursor.y - capture.y + 1)*this.size);
+    this.ctx.rect(capture.x*this.size, capture.y*this.size, (cursor.x - capture.x + 1)*this.size,(cursor.y - capture.y + 1)*this.size);
     this.ctx.fill();
     this.ctx.globalAlpha = 1.0;
 
