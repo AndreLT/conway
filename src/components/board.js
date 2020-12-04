@@ -1,12 +1,13 @@
 import React from 'react';
-import { FaPlay, FaStepForward, FaArrowLeft, FaArrowRight, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
+import ReactTooltip from 'react-tooltip';
+import { FaPlay, FaStepForward, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
 import { MdSelectAll } from 'react-icons/md';
 
 import Canvas from './canvas';
 import Alive from './alive';
 import Display from './display';
-import PatternButton from './partternbutton';
+import PatternButtons from './partternbuttons';
 import Toolbar from './toolbar';
 import Tutorial from './tutorial';
 
@@ -21,6 +22,7 @@ class Board extends React.Component {
         this.cursorCanvas = null; //initiated on component mount
         this.display = null; //initiated on component mount
         this.tutorial = null; //initiated on component mount
+        this.patternButtons = null; //initiated on component mount
         this.gridRef = React.createRef();
         this.boardRef = React.createRef();
         this.cursorRef = React.createRef();
@@ -462,6 +464,9 @@ class Board extends React.Component {
         this.canvasSetup();
         this.displaySetup();
 
+        this.patternButtons = new PatternButtons((model)=> this.handleModel(model), Math.floor(this.state.size*.8))
+        this.patternButtons.loadPatterns();
+
         window.addEventListener('resize', () => {
             this.canvasSetup();
             this.displaySetup();
@@ -479,6 +484,7 @@ class Board extends React.Component {
 
     render() {
         return <div class="bg-transparent overflow-x-hidden relative flex h-full w-full">
+            <ReactTooltip />
             <div class="flex flex-row w-full h-full">
                 {this.state.tutorial && 
                     <span id="tutorialmask" onClick={()=> this.setState({tutorialStep: this.state.tutorialStep+1})} style={{ position: "absolute", width: "100%", height: "100%", zIndex: 30}}>
@@ -587,21 +593,16 @@ class Board extends React.Component {
                                     this.stop();
                                     this.setState({ menuOut: true, capturing: true })
                                 }}
+                                data-tip="Area selection"
                             >
                                 <MdSelectAll />
                             </button>
-                            <button class="px-4 m-auto py-2 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize(this.alive.bounds)}><FaDiceD6 /></button>
-                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()}>Clear</button>
-                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()}><BsGrid3X3 /></button>
+                            <button class="px-4 m-auto py-2 bg-transparent rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.randomize(this.alive.bounds)} data-tip="Random board"><FaDiceD6 /></button>
+                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()} data-tip="Clear board">Clear</button>
+                            <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()} data-tip={"Toggle grid visibility"}><BsGrid3X3 /></button>
                         </div>
-                        <div id="patterns" class="w-11/12 relative flex flex-col mx-auto h-56 shadow-neuinner py-2 rounded-md scrolling-touch overflow-x-hidden bg-gray-200">
-                            <PatternButton onClick={() => this.handleModel(this.rpentomino)}>R-Pentomino</PatternButton>
-                            <PatternButton onClick={() => this.handleModel(this.gun)}>Glider Gun</PatternButton>
-                            <PatternButton onClick={() => this.handleModel(this.glider)}>Glider</PatternButton>
-                            <PatternButton onClick={() => this.handleModel(this.megaglider)}>Mega Glider</PatternButton>
-                            <PatternButton onClick={() => this.handleModel(this.pulsar3)}>3-pulsar</PatternButton>
-                            <PatternButton onClick={() => this.handleModel(this.ap11)}>Achim's p11</PatternButton>
-                        </div>
+                            {this.patternButtons?.renderButtons()}
+                        
                     </div>
                 </div>
             </div>
