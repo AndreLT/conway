@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactTooltip from 'react-tooltip';
-import { FaPlay, FaStepForward, FaPause, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
+import { FaPlay, FaStepForward, FaPause, FaGithub, FaForward, FaBackward, FaEquals, FaDiceD6 } from 'react-icons/fa';
 import { BsGrid3X3 } from 'react-icons/bs';
 import { MdSelectAll } from 'react-icons/md';
 
@@ -314,41 +314,6 @@ class Board extends React.Component {
             this.setState({ mouseDown: false })
     }
 
-    handleTutorial() {
-
-        const addListener = (next) => {
-            let nextListener = document.getElementById(next);
-            nextListener.addEventListener('click', () => this.handleTutorial());
-        }
-        const removeListener = (current) => {
-            let currentListener = document.getElementById(current);
-            currentListener.removeEventListener('click', () => this.handleTutorial());
-        }
-
-        switch (this.state.tutorial) {
-            case "menu":
-                removeListener("menu");
-                addListener("rpentomino");
-                this.setState({ tutorial: "rpentomino" })
-                break;
-            case "rpentomino":
-                removeListener("rpentomino");
-                addListener("cursor");
-                this.setState({ menuOut: true, tutorial: "skipped" })
-                break;
-            case "skipped":
-                removeListener("cursor");
-                addListener("play");
-                document.getElementById("play").style.zIndex = 40
-                this.setState({ menuOut: false, tutorial: "play" })
-                break;
-            case "play":
-                removeListener("play")
-                this.setState({ tutorial: false })
-                break;
-        }
-    }
-
     cutSelection() {
         let capturingStart = this.state.capturingCoordinates.start;
         let capturingEnd = this.state.capturingCoordinates.end;
@@ -601,8 +566,16 @@ class Board extends React.Component {
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.clear()} data-tip="Clear board">Clear</button>
                             <button class="px-4 m-auto py-2 rounded-md m-2 shadow-neusm focus:outline-none" onClick={() => this.toggleGrid()} data-tip={"Toggle grid visibility"}><BsGrid3X3 /></button>
                         </div>
-                            {this.patternButtons?.renderButtons()}
-                        
+                        {this.patternButtons?.renderButtons()}
+                        <div class="flex self-center w-full content-center justify-between fixed bottom-0 text-sm px-3 py-2">
+                            <div class=" text-gray-800">
+                                Beta v1.0
+                            </div>
+                            <div class="flex flex-row">
+                                <a href="https://github.com/AndreLT/conway" class="flex focus:outline-none pr-2  text-gray-800">Check the repo </a>
+                                <FaGithub size={25} color="rgb(137,137,137)"/>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
