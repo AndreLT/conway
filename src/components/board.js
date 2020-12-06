@@ -34,6 +34,7 @@ class Board extends React.Component {
         this.rpentomino = require('../models/r_pentomino.json');
         this.ap11 = require('../models/achims_p11.json')
         this.data = {};
+        this.lastTouch = {};
         
         this.state = {
             intervalid: null,
@@ -421,6 +422,11 @@ class Board extends React.Component {
         this.initCanvas();
     }
 
+    handleTouchMove(clientX, clientY) {
+        this.lastTouch = {x: clientX, y: clientY}
+        this.handleMouseMove(clientX, clientY)
+    }
+
     componentDidMount() {
 
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent))
@@ -469,8 +475,8 @@ class Board extends React.Component {
                         class={`bg-transparent m-auto absolute ${this.state.overModel && 'cursor-move'}`}
                         ref={this.cursorRef}
                         onTouchStart={(e) => this.handleTouchCoord(e.touches[0].clientX, e.touches[0].clientY)}
-                        onTouchEnd={() => this.handleMouseUp()}
-                        onTouchMove={(e) => this.handleMouseMove(e.touches[0].clientX, e.touches[0].clientY)}
+                        onTouchEnd={() => this.handleMouseUp(this.lastTouch.x, this.lastTouch.y)}
+                        onTouchMove={(e) => this.handleTouchMove(e.touches[0].clientX, e.touches[0].clientY)}
                         onMouseMove={(e) => this.handleMouseMove(e.clientX, e.clientY)}
                         onMouseDown={() => this.handleMouseDown(this.state.cursorcoord)}
                         onMouseUp={(e) => this.handleMouseUp(e.clientX, e.clientY)}

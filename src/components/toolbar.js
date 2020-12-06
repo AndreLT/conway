@@ -24,8 +24,8 @@ const Toolbar = (props) => {
             <div style={{
                 position: "absolute",
                 displat: "flex",
-                left: (props.coordinates.start.x * props.size) - 38,
-                top: (props.coordinates.start.y * props.size) - 38,
+                left: (props.coordinates.start.x * props.size) - (props.isMobile ? 60 : 38),
+                top: (props.coordinates.start.y * props.size) - (props.isMobile ? 60 : 38),
             }}>
                 <div 
                     style={{
